@@ -832,7 +832,7 @@ def ping_server(server_name, server_ip, port, message):
     current_server_states = previous_server_states    
     
     # Check if output contains 'failed' or 'succeeded'    
-    if 'succeeded' in str(ping_output):
+    if 'succeeded' in str(ping_output) or 'open' in str(ping_output):
         print(f"Server {server_name} is online.")
         logging.info(f"Server {server_name} is online.")
         logging.info(f"Output: {str(ping_output)}")

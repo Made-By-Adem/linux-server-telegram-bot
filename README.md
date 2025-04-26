@@ -174,7 +174,7 @@ sudo apt install etherwake stress-ng netcat-traditional
     - `bot_logfiles.txt` \
         Copy and past all the paths to the logs on separate lines if you want to have access to through the bot.
     - `bot_servers.txt`
-        Set all the servers you want to ping on separate lines if you want to be able to ping them through the bot. (Format: name=ipaddress:port) You can also put websites here, but don't use http or https. Use port 80. eg.: Some URL=some-website.dev:80
+        Set all the servers you want to ping on separate lines if you want to be able to ping them through the bot. (Format: name=ipaddress:port) You can also put websites here, but don't use http or https. Use port 80 or 443. eg.: Some URL=some-website.dev:443 
     - `bot_services.txt`
         List all the services you want to check by their names on separate lines if you want to be able to check them through the bot.
 

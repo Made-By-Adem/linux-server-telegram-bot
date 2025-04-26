@@ -185,7 +185,7 @@ def are_servers_online(server_list):
         ping_output = subprocess.run(f'nc -zv -w {time_out} {server_ip} {port}', shell=True, capture_output=True, text=True)
         
         # Check if output contains 'failed' or 'succeeded'    
-        if 'succeeded' in str(ping_output):
+        if 'succeeded' in str(ping_output) or 'open' in str(ping_output):
             print(f"Server {server_name} is online.")
             logging.info(f"Server {server_name} is online.")
             logging.info(f"Output: {str(ping_output)}")
