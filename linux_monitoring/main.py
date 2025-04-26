@@ -260,6 +260,26 @@ def check_cpu_usage():
             logging.info(f"Top consumers: \n{top_consumers}")
             send_telegram_message(f"🔥 CPU usage is high (> 80%). First time it was {cpu_usage}% and after 30 seconds it was {cpu_usage2}%. These are the top consumers: \n<pre>{top_consumers}</pre>", "HTML")
 
+# Check temperature
+def check_temperature():
+    command = 'cat /sys/class/thermal/thermal_zone0/temp | awk \'{print "Temperature: " $1/1000 "°C"}\''
+    temperature = subprocess.run(command, shell=True, capture_output=True, text=True).stdout.strip()
+    print(f"{temperature}")
+    logging.info(f"{temperature}")
+    
+    temperature_float = temperature.split('Temperature: ')[1].split('°C')[0]
+    
+    if (float(temperature_float) > 50):
+        # Check if fans are turned on
+        command = 'cat /sys/class/thermal/cooling_device0/cur_state | awk \'{print "Fans state: " $1}\''
+        fans_state = subprocess.run(command, shell=True, capture_output=True, text=True).stdout.strip()
+        print(f"Fans state: {fans_state}")
+        logging.info(f"Fans state: {fans_state}")
+        
+        if (fans_state != "1"):
+            send_telegram_message(f"🌡️ Temperature is high (> 50°C). Current temperature is {temperature_float}. Fans are not turned on: {fans_state}", "HTML")
+        else:
+            send_telegram_message(f"🌡️ Temperature is high (> 50°C). Current temperature is {temperature_float}. Fans are turned on: {fans_state}", "HTML")
 
 # Function to send messages to Telegram
 def send_telegram_message(message, parse_mode=None):
@@ -288,6 +308,7 @@ def job():
     check_and_restart_containers(containers_list)
     are_servers_online(servers_list)
     check_cpu_usage()
+    check_temperature()
     check_storage_usage()
     print("Monitoring finished. See you in 5 minutes.")
     logging.info("Monitoring finished. See you in 5 minutes.")

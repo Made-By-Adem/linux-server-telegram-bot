@@ -11,6 +11,7 @@ It's ideal if you have a single server running, with certain custom services and
 - Check CPU usage
 - Check memory usage
 - Check disk usage
+- Check temperature
 - Check Docker containers
 - Check services
 - Ping some servers or websites
@@ -25,7 +26,7 @@ It's ideal if you have a single server running, with certain custom services and
 - Start, stop or restart Docker containers
 - Check certain logs
 - Send custom commands to server
-- Check system information
+- Check system information (stress test option requires stress-ng on the server)
 - Reboot the server
 
 <center><img src="./example.jpg" alt="Example Linux Telegram Bot" width="300px"></center>
@@ -59,8 +60,16 @@ It's ideal if you have a single server running, with certain custom services and
 - A Telegram bot token. You can get one by creating a bot through the [BotFather](https://core.telegram.org/bots#botfather).
 - Python3 installed on the server.
 - If you want to make use of the Wake On Lan feature, you need to install etherwake.
+- If you want to use the stress test feature, you need to install stress-ng.
 
 *Important:* The bot needs admin privileges to use certain features.
+
+**Install etherwake and stress-ng**
+
+```bash
+sudo apt update
+sudo apt install etherwake stress-ng
+```
 
 ### Installation
 
@@ -127,7 +136,7 @@ It's ideal if you have a single server running, with certain custom services and
     After=network.target
 
     [Service]
-    ExecStart=/your/path/to/linux_bot/venv/bin/python /your/path/to/linux_bot/linux_bot.py
+    ExecStart=/your/path/to/linux_bot/venv/bin/python /your/path/to/linux_bot/main.py
     WorkingDirectory=/your/path/to/linux_bot
     User=root
     Restart=always
@@ -143,7 +152,7 @@ It's ideal if you have a single server running, with certain custom services and
     After=network.target
 
     [Service]
-    ExecStart=/your/path/to/linux_monitoring/venv/bin/python /your/path/to/linux_monitoring/monitoring.py
+    ExecStart=/your/path/to/linux_monitoring/venv/bin/python /your/path/to/linux_monitoring/main.py
     WorkingDirectory=/your/path/to/linux_monitoring
     User=root
     Restart=always
@@ -196,20 +205,16 @@ The monitoring service will check all the listed services, servers, containers a
 
 It will inform you if the server you listed is online (ping) or not. If not, it will try again within 2 minutes. If the server still did not respond it will tell you so.
 
-It will notify you if your CPU, memory usage or disk usage is high.
+It will notify you if your CPU, memory usage, disk usage or temperature is high.
 
 ### Bot
 Send /menu and you will get a menu with all the options:
 - menu - Show the menu
-- wakewol - Wake up device
-- services - Get services options
-- docker - Get docker options
-- logs - Get logs
-- ping - Check servers
-- command - Run a command
-- sysinfo - Get system information
 - start - Start the bot
-- reboot - Reboot the server
+
+To use the WoL option, you need to install etherwake on your server
+
+To use the stress test option, you need to install stress-ng on your server
 
 ## Contributing
 Feel free to submit issues or pull requests if you have suggestions for improvements or new features. Please follow the existing coding style.
