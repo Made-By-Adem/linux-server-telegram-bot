@@ -59,6 +59,7 @@ It's ideal if you have a single server running, with certain custom services and
 - A linux server (RapsberryPi, Ubuntu, etc)
 - A Telegram bot token. You can get one by creating a bot through the [BotFather](https://core.telegram.org/bots#botfather).
 - Python3 installed on the server.
+- The function to check servers/websites uses netcat, so you need to install netcat on the server.
 - If you want to make use of the Wake On Lan feature, you need to install etherwake.
 - If you want to use the stress test feature, you need to install stress-ng.
 
@@ -68,7 +69,7 @@ It's ideal if you have a single server running, with certain custom services and
 
 ```bash
 sudo apt update
-sudo apt install etherwake stress-ng
+sudo apt install etherwake stress-ng netcat-traditional
 ```
 
 ### Installation
@@ -122,7 +123,7 @@ sudo apt install etherwake stress-ng
     ```bash
     cp .env.example .env
     ```   
-    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot
+    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot. Modify the *main.py* if you add more than one user. Just copy past the CHAT_ID_PERSON1 variable and add more CHAT_ID_PERSON2, CHAT_ID_PERSON3, etc. Add these users to the ALLOWED_USERS list in the main.py of linux_bot and linux_monitoring.
 
     You can obtain your Telegram bot token by creating a bot on https://t.me/BotFather
 

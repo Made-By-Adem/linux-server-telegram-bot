@@ -17,6 +17,7 @@ load_dotenv(dotenv_path='../.env')
 SECRET_TOKEN = os.environ.get('SECRET_TOKEN')
 bot = telebot.TeleBot(SECRET_TOKEN)
 CHAT_ID_PERSON1 = int(os.environ.get('CHAT_ID_PERSON1'))
+ALLOWED_USERS = [CHAT_ID_PERSON1]
 
 # LOGGING
 log_directory = './logs/'
@@ -284,7 +285,8 @@ def check_temperature():
 # Function to send messages to Telegram
 def send_telegram_message(message, parse_mode=None):
     try:
-        bot.send_message(CHAT_ID_PERSON1, message, parse_mode=parse_mode)
+        for chat_id in ALLOWED_USERS:
+            bot.send_message(chat_id, message, parse_mode=parse_mode)
     except Exception as e:
         print(f"Error while sending Telegram message: {str(e)}")
         logging.error(f"Error while sending Telegram message: {str(e)}")
