@@ -11,6 +11,7 @@ It's ideal if you have a single server running, with certain custom services and
 - Check CPU usage
 - Check memory usage
 - Check disk usage
+- Check temperature
 - Check Docker containers
 - Check services
 - Ping some servers or websites
@@ -25,7 +26,7 @@ It's ideal if you have a single server running, with certain custom services and
 - Start, stop or restart Docker containers
 - Check certain logs
 - Send custom commands to server
-- Check system information
+- Check system information (stress test option requires stress-ng on the server)
 - Reboot the server
 
 <center><img src="./example.jpg" alt="Example Linux Telegram Bot" width="300px"></center>
@@ -58,9 +59,18 @@ It's ideal if you have a single server running, with certain custom services and
 - A linux server (RapsberryPi, Ubuntu, etc)
 - A Telegram bot token. You can get one by creating a bot through the [BotFather](https://core.telegram.org/bots#botfather).
 - Python3 installed on the server.
+- The function to check servers/websites uses netcat, so you need to install netcat on the server.
 - If you want to make use of the Wake On Lan feature, you need to install etherwake.
+- If you want to use the stress test feature, you need to install stress-ng.
 
 *Important:* The bot needs admin privileges to use certain features.
+
+**Install etherwake and stress-ng**
+
+```bash
+sudo apt update
+sudo apt install etherwake stress-ng netcat-traditional
+```
 
 ### Installation
 
@@ -113,7 +123,7 @@ It's ideal if you have a single server running, with certain custom services and
     ```bash
     cp .env.example .env
     ```   
-    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot
+    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot. Modify the *main.py* if you add more than one user. Just copy past the CHAT_ID_PERSON1 variable and add more CHAT_ID_PERSON2, CHAT_ID_PERSON3, etc. Add these users to the ALLOWED_USERS list in the main.py of linux_bot and linux_monitoring.
 
     You can obtain your Telegram bot token by creating a bot on https://t.me/BotFather
 
@@ -127,7 +137,7 @@ It's ideal if you have a single server running, with certain custom services and
     After=network.target
 
     [Service]
-    ExecStart=/your/path/to/linux_bot/venv/bin/python /your/path/to/linux_bot/linux_bot.py
+    ExecStart=/your/path/to/linux_bot/venv/bin/python /your/path/to/linux_bot/main.py
     WorkingDirectory=/your/path/to/linux_bot
     User=root
     Restart=always
@@ -143,7 +153,7 @@ It's ideal if you have a single server running, with certain custom services and
     After=network.target
 
     [Service]
-    ExecStart=/your/path/to/linux_monitoring/venv/bin/python /your/path/to/linux_monitoring/monitoring.py
+    ExecStart=/your/path/to/linux_monitoring/venv/bin/python /your/path/to/linux_monitoring/main.py
     WorkingDirectory=/your/path/to/linux_monitoring
     User=root
     Restart=always
@@ -164,7 +174,7 @@ It's ideal if you have a single server running, with certain custom services and
     - `bot_logfiles.txt` \
         Copy and past all the paths to the logs on separate lines if you want to have access to through the bot.
     - `bot_servers.txt`
-        Set all the servers you want to ping on separate lines if you want to be able to ping them through the bot. (Format: name=ipaddress:port) You can also put websites here. Use port 80.
+        Set all the servers you want to ping on separate lines if you want to be able to ping them through the bot. (Format: name=ipaddress:port) You can also put websites here, but don't use http or https. Use port 80 or 443. eg.: Some URL=some-website.dev:443 
     - `bot_services.txt`
         List all the services you want to check by their names on separate lines if you want to be able to check them through the bot.
 
@@ -196,20 +206,16 @@ The monitoring service will check all the listed services, servers, containers a
 
 It will inform you if the server you listed is online (ping) or not. If not, it will try again within 2 minutes. If the server still did not respond it will tell you so.
 
-It will notify you if your CPU, memory usage or disk usage is high.
+It will notify you if your CPU, memory usage, disk usage or temperature is high.
 
 ### Bot
 Send /menu and you will get a menu with all the options:
 - menu - Show the menu
-- wakewol - Wake up device
-- services - Get services options
-- docker - Get docker options
-- logs - Get logs
-- ping - Check servers
-- command - Run a command
-- sysinfo - Get system information
 - start - Start the bot
-- reboot - Reboot the server
+
+To use the WoL option, you need to install etherwake on your server
+
+To use the stress test option, you need to install stress-ng on your server
 
 ## Contributing
 Feel free to submit issues or pull requests if you have suggestions for improvements or new features. Please follow the existing coding style.

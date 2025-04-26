@@ -51,29 +51,8 @@ commands_telegram = """
 <b>Menu - Menu of the bot</b>
 /menu
 
-<b>Services - Go to services options</b>
-/services
-
-<b>Docker - Go to docker options</b>
-/docker
-
-<b>Logs - Get logs</b>
-/logs
-
-<b>Ping - Check servers</b>
-/ping
-
-<b>Command - Send a custom command to me</b>
-/command
-
-<b>System info - Get system info</b>
-/sysinfo
-
 <b>Start - Start the bot</b>
 /start
-
-<b>Reboot - Reboot the server</b>
-/reboot
 """
 
 # Read service and container lists from files
@@ -114,9 +93,11 @@ def send_handle_menu(message):
     button_sendcommand = types.InlineKeyboardButton("📤 Send command")
     button_checkservers = types.InlineKeyboardButton("🔔 Check servers")
     button_systeminfo = types.InlineKeyboardButton("📃 System info")
+    button_stresstest = types.InlineKeyboardButton("💪 Stress test")
+    button_fancontrol = types.InlineKeyboardButton("💨 Fan state")
     button_reboot = types.InlineKeyboardButton("🔁 Reboot")
 
-    markup_menu.add(button_services, button_docker, button_logs, button_sendcommand, button_checkservers, button_systeminfo, button_reboot)
+    markup_menu.add(button_wol, button_services, button_docker, button_logs, button_sendcommand, button_checkservers, button_systeminfo, button_stresstest, button_fancontrol, button_reboot)
     option_selection_text = "Choose one of the following options:"
 
     bot.send_message(message.chat.id, option_selection_text,
@@ -126,180 +107,9 @@ def send_handle_menu(message):
 @bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🔙 Go back to main")
 def handle_go_back(message):
     send_handle_menu(message)
-
-# SEND CUSTOM COMMAND
-@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "📤 Send command")
-# Reply that the next message will be sent as a command to the server
-def handle_send_command(message):
-    bot.reply_to(
-        message, "What command do you want to send to the server? Send /cancel to exit")
-    bot.register_next_step_handler(message, handle_command)
-
-
-def handle_command(message):
-    logging.info(f"User {message.from_user.first_name} sent a command: {message.text}")
-    command = message.text
-    logging.debug(f"Sending command: {command}")
-    bot.reply_to(message, f"Sending command: {command}")
     
-    if command.lower() == "/cancel" or command.lower() == "cancel":
-        send_handle_menu(message)
-        return
-    
-    try:
-        command_output = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True
-        )
 
-        # Extract the stdout attribute
-        command_stdout = command_output.stdout
-
-        # Escape the text to prevent Telegram from interpreting it as entities
-        command_stdout_escaped = html.escape(command_stdout)
-
-        # Split the output into chunks of 10 lines
-        lines = command_stdout_escaped.split('\n')
-        chunks = [textwrap.dedent('\n'.join(lines[i:i+10]))
-                  for i in range(0, len(lines), 10)]
-        
-        logging.debug(f"Command output: {command_stdout_escaped}")
-
-        # If the output is empty, send a message indicating that
-        if not chunks:
-            bot.send_message(message.chat.id, "The command output is empty.")
-        else:
-            # Send each chunk separately
-            for chunk in chunks:
-                bot.send_message(message.chat.id, chunk)
-
-        handle_send_command(message)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Sending command failed. Error: {e}")
-        bot.reply_to(message, f"Sending command failed. Error: {e}")
-
-
-@bot.message_handler(commands=['command'], func=lambda message: message.chat.id in ALLOWED_USERS)
-def send_handle_command(message):
-    handle_send_command(message)
-
-# SYSTEM INFO
-@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "📃 System info")
-def handle_system_info(message):
-    logging.info(f"User {message.from_user.first_name} requested the system info")
-    bot.reply_to(message, "Getting system info.")
-    command = """
-    echo "CPU Usage:"
-    top -b -n 1 | awk '/^%Cpu/ {print "Usage: " 100 - $8 "%"}'
-    
-    echo "\nMemory Usage:"
-    free -m | awk '/^Mem/ {print "Total: " $2 "MB\tUsed: " $3 "MB\tFree: " $4 "MB\tCache: " $6 "MB"}'
-
-    echo "\nLargest Disk Usage (Quantity and Percentage):"
-    df -h | grep '/dev/' | sort -rh -k4 | head -n 1 | awk '{print "Quantity: " $3 "\tPercentage: " $5}'
-
-    echo "\nAvailable Updates:"
-    if command -v apt &> /dev/null; then
-      sudo apt list --upgradable 2>/dev/null | grep -c '/'
-    elif command -v yum &> /dev/null; then
-      sudo yum list updates 2>/dev/null | grep -c '\\.'
-    else
-      echo "Unsupported package manager"
-    fi
-
-    echo "\nSystem Uptime:"
-    uptime
-    """
-
-
-    logging.debug(f"Sending command: {command}")
-    reply_message = "<b>System info:</b>\n"
-    try:
-        command_output = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True
-        )
-
-        # Extract the stdout attribute
-        command_stdout = command_output.stdout
-
-        # Escape the text to prevent Telegram from interpreting it as entities
-        command_stdout_escaped = html.escape(command_stdout)
-
-        # Split the output into chunks of 10 lines
-        lines = command_stdout_escaped.split('\n')
-        chunks = [textwrap.dedent('\n'.join(lines[i:i+10]))
-                  for i in range(0, len(lines), 10)]
-        
-        logging.debug(f"Command output: {command_stdout_escaped}")
-
-        # If the output is empty, send a message indicating that
-        if not chunks:
-            bot.send_message(message.chat.id, "The command output is empty.")
-        else:
-            # Concatenate all chunks into one message
-            full_output = '\n'.join(chunks)
-            # Remove the line with "/usr/bin/apt"
-            full_output = '\n'.join(line for line in full_output.split('\n') if "/usr/bin/apt" not in line)
-            reply_message += full_output
-            
-            bot.send_message(message.chat.id, reply_message)
-
-        send_handle_menu(message)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Sending command system info failed. Error: {e}")
-        print(f"Sending command system info failed. Error: {e}")	
-        bot.reply_to(message, f"Sending command system info failed. Error: {e}")
-        # Go back to the main menu
-        send_handle_menu(message)
-
-@bot.message_handler(commands=['sysinfo'], func=lambda message: message.chat.id in ALLOWED_USERS)
-def send_handle_system_info(message):
-    handle_system_info(message)
-
-# REBOOT
-@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🔁 Reboot")
-def handle_reboot_menu(message):
-    markup_reboot = types.ReplyKeyboardMarkup(
-        row_width=2, one_time_keyboard=True)
-    # Add buttons
-    button1 = types.InlineKeyboardButton("🔁 Reboot now")
-    button2 = types.InlineKeyboardButton("❌ Cancel reboot")
-
-    markup_reboot.add(button1, button2)
-    option_selection_text = "Are you sure you want to reboot the server?"
-
-    bot.send_message(message.chat.id, option_selection_text,
-                     reply_markup=markup_reboot)
-
-
-@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🔁 Reboot now")
-def handle_reboot_now(message):
-    logging.info(f"User {message.from_user.first_name} requested a reboot")
-    bot.reply_to(message, "Rebooting the server.")
-    try:
-        logging.info(f"Rebooting the server.")
-        subprocess.run(f"sudo reboot now", shell=True, check=True)
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Rebooting failed. Error: {e}")
-        print(f"Rebooting failed. Error: {e}")
-        bot.reply_to(message, f"Rebooting failed. Error: {e}")
-
-@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "❌ Cancel reboot")
-def handle_cancel_reboot(message):
-    logging.info(f"User {message.from_user.first_name} canceled the reboot")
-    bot.reply_to(message, "Reboot canceled.")
-
-
-@bot.message_handler(commands=['reboot'], func=lambda message: message.chat.id in ALLOWED_USERS)
-def send_handle_reboot(message):
-    handle_reboot_menu(message)
-
-# WAKE up a device on the wake on lan
+# WOL
 @bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "💻 Wake up WoL")
 def handle_wakewol_menu(message):
     markup_wakewol = types.ReplyKeyboardMarkup(
@@ -549,8 +359,6 @@ def handle_restartallservices(message):
     handle_getstatusservices(message)
 
 # Stop all services
-
-
 @bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🟥🟥 Stop all services")
 def handle_stopallservices(message):
     logging.info(f"User {message.from_user.first_name} requested service stop all")
@@ -917,6 +725,63 @@ def handle_logs(message):
 def send_handle_logs(message):
     handle_logs_menu(message)
 
+# SEND CUSTOM COMMAND
+@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "📤 Send command")
+# Reply that the next message will be sent as a command to the server
+def handle_send_command(message):
+    bot.reply_to(
+        message, "What command do you want to send to the server? Send /cancel to exit")
+    bot.register_next_step_handler(message, handle_command)
+
+
+def handle_command(message):
+    logging.info(f"User {message.from_user.first_name} sent a command: {message.text}")
+    command = message.text
+    logging.debug(f"Sending command: {command}")
+    bot.reply_to(message, f"Sending command: {command}")
+    
+    if command.lower() == "/cancel" or command.lower() == "cancel":
+        send_handle_menu(message)
+        return
+    
+    try:
+        command_output = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+
+        # Extract the stdout attribute
+        command_stdout = command_output.stdout
+
+        # Escape the text to prevent Telegram from interpreting it as entities
+        command_stdout_escaped = html.escape(command_stdout)
+
+        # Split the output into chunks of 10 lines
+        lines = command_stdout_escaped.split('\n')
+        chunks = [textwrap.dedent('\n'.join(lines[i:i+10]))
+                  for i in range(0, len(lines), 10)]
+        
+        logging.debug(f"Command output: {command_stdout_escaped}")
+
+        # If the output is empty, send a message indicating that
+        if not chunks:
+            bot.send_message(message.chat.id, "The command output is empty.")
+        else:
+            # Send each chunk separately
+            for chunk in chunks:
+                bot.send_message(message.chat.id, chunk)
+
+        handle_send_command(message)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Sending command failed. Error: {e}")
+        bot.reply_to(message, f"Sending command failed. Error: {e}")
+
+
+@bot.message_handler(commands=['command'], func=lambda message: message.chat.id in ALLOWED_USERS)
+def send_handle_command(message):
+    handle_send_command(message)
 
 # CHECK SERVERS
 @bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🔔 Check servers")
@@ -967,7 +832,7 @@ def ping_server(server_name, server_ip, port, message):
     current_server_states = previous_server_states    
     
     # Check if output contains 'failed' or 'succeeded'    
-    if 'succeeded' in str(ping_output):
+    if 'succeeded' in str(ping_output) or 'open' in str(ping_output):
         print(f"Server {server_name} is online.")
         logging.info(f"Server {server_name} is online.")
         logging.info(f"Output: {str(ping_output)}")
@@ -1017,6 +882,212 @@ def ping_server(server_name, server_ip, port, message):
             current_server_states[server_name] = 'unknown'
 
     save_server_states_to_json(current_server_states)
+ 
+ 
+# SYSTEM INFO
+@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "📃 System info")
+def handle_system_info(message):
+    
+    logging.info(f"User {message.from_user.first_name} requested the system info")
+    bot.reply_to(message, "Getting system info.")
+    command = """
+    echo "CPU Usage:"
+    top -b -n 1 | awk '/^%Cpu/ {print "Usage: " 100 - $8 "%"}'
+    
+    echo "\nMemory Usage:"
+    free -m | awk '/^Mem/ {print "Total: " $2 "MB\tUsed: " $3 "MB\tFree: " $4 "MB\tCache: " $6 "MB"}'
+    
+    echo "\nDisk Usage (Total, Used, Free):"
+    df -h 2>/dev/null | grep /dev/ | awk '{print "Total: " $2 "\tUsed: " $3 " (" $5 ") \tFree: " $4}'
+    
+    echo "\nCurrent Temperature:"
+    cat /sys/class/thermal/thermal_zone0/temp | awk '{print "Temperature: " $1/1000 "°C"}'
+    
+    echo "\nCurrent Fan state:"
+    cat /sys/class/thermal/cooling_device0/cur_state | awk '{print "Fan state: " $1}'
+
+    echo "\nAvailable Updates:"
+    if command -v apt &> /dev/null; then
+      sudo apt list --upgradable 2>/dev/null | grep -c '/'
+    elif command -v yum &> /dev/null; then
+      sudo yum list updates 2>/dev/null | grep -c '\\.'
+    else
+      echo "Unsupported package manager"
+    fi
+
+    echo "\nSystem Uptime:"
+    uptime
+    """
+
+    logging.debug(f"Sending command: {command}")
+    reply_message = "<b>System info:</b>\n"
+    try:
+        command_output = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+
+        # Extract the stdout attribute
+        command_stdout = command_output.stdout
+
+        # Escape the text to prevent Telegram from interpreting it as entities
+        command_stdout_escaped = html.escape(command_stdout)
+
+        # Split the output into chunks of 10 lines
+        lines = command_stdout_escaped.split('\n')
+        chunks = [textwrap.dedent('\n'.join(lines[i:i+10]))
+                  for i in range(0, len(lines), 10)]
+        
+        logging.debug(f"Command output: {command_stdout_escaped}")
+
+        # If the output is empty, send a message indicating that
+        if not chunks:
+            bot.send_message(message.chat.id, "The command output is empty.")
+        else:
+            # Concatenate all chunks into one message
+            full_output = '\n'.join(chunks)
+            # Remove the line with "/usr/bin/apt"
+            full_output = '\n'.join(line for line in full_output.split('\n') if "/usr/bin/apt" not in line)
+            reply_message += full_output
+            
+            bot.send_message(message.chat.id, reply_message)
+
+        send_handle_menu(message)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Sending command system info failed. Error: {e}")
+        print(f"Sending command system info failed. Error: {e}")    
+        bot.reply_to(message, f"Sending command system info failed. Error: {e}")
+        # Go back to the main menu
+        send_handle_menu(message)
+
+
+@bot.message_handler(commands=['sysinfo'], func=lambda message: message.chat.id in ALLOWED_USERS)
+def send_handle_system_info(message):
+    handle_system_info(message)
+
+    
+## STRESS TEST
+@bot.message_handler(func=lambda msg: msg.chat.id in ALLOWED_USERS and msg.text == "💪 Stress test")
+def handle_stress_test(msg):
+    prompt = bot.send_message(msg.chat.id, "Enter the number of minutes for the stress test:")
+    bot.register_next_step_handler(prompt, run_stress_test)
+
+def run_stress_test(msg):
+    if msg.text.isdigit() and int(msg.text) > 0:
+        seconds = int(msg.text) * 60
+        bot.send_message(msg.chat.id, f"Stress test started for {msg.text} minutes.")
+        response = subprocess.run(
+            ["stress-ng", "--cpu", "4", "--timeout", f"{seconds}s"],
+            capture_output=True, text=True
+        )
+        bot.send_message(msg.chat.id, f"Response:\n{response.stdout or response.stderr}")
+    else:
+        bot.send_message(msg.chat.id, "Please enter a valid number greater than 0.")
+    
+    send_handle_menu(msg)
+
+# FAN STATE
+@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "💨 Fan state")
+def handle_fan_state(message):
+    logging.info(f"User {message.from_user.first_name} requested fan state")
+    markup_menu = types.ReplyKeyboardMarkup(
+    row_width=2, one_time_keyboard=True)
+    
+    fan_state_0 = types.InlineKeyboardButton("💨 Set fans state 0: Off")
+    fan_state_1 = types.InlineKeyboardButton("💨 Set fans state 1: On")
+    back = types.InlineKeyboardButton("🔙 Go back to main")
+    
+    markup_menu.add(fan_state_0, fan_state_1, back)
+    
+    option_selection_text = "Choose one of the following options:"
+    
+    bot.send_message(message.chat.id, option_selection_text,
+                     reply_markup=markup_menu)
+    
+    bot.register_next_step_handler(message, handle_fan_state_option)
+    
+def handle_fan_state_option(message):
+    logger.info(f"User {message.from_user.first_name} selected fan state option: {message.text}")
+    
+    if message.text == "🔙 Go back to main":
+        send_handle_menu(message)
+        return
+    
+    if message.text == "💨 Set fans state 0: Off":
+        state = 0
+        new_message = "💨 fans state to 0: Off (automatic)"
+    elif message.text == "💨 Set fans state 1: On":
+        state = 1
+        new_message = "💨 fans state 1: On"
+    else:
+        bot.send_message(message.chat.id, "Invalid option selected. Please try again.")
+        send_handle_menu(message)
+        return
+        
+    bot.send_message(message.chat.id, f"Setting {new_message}...")
+        
+    command = f"echo {state} | sudo tee /sys/class/thermal/cooling_device0/cur_state"
+    
+    try:
+        command_output = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+
+        # If output was successful, send a message indicating that
+        if command_output.returncode == 0:
+            bot.send_message(message.chat.id, f"💨 Fans state changed to {new_message}.")
+        else:
+            logging.error(f"Setting fans state failed. Error: {command_output.stderr}")
+            bot.reply_to(message, f"Setting fans state failed. Error: {command_output.stderr}")
+
+        send_handle_menu(message)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Setting fans state failed. Error: {e}")
+        bot.reply_to(message, f"Setting fans state failed. Error: {e}")
+
+# REBOOT
+@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🔁 Reboot")
+def handle_reboot_menu(message):
+    markup_reboot = types.ReplyKeyboardMarkup(
+        row_width=2, one_time_keyboard=True)
+    # Add buttons
+    button1 = types.InlineKeyboardButton("🔁 Reboot now")
+    button2 = types.InlineKeyboardButton("❌ Cancel reboot")
+
+    markup_reboot.add(button1, button2)
+    option_selection_text = "Are you sure you want to reboot the server?"
+
+    bot.send_message(message.chat.id, option_selection_text,
+                     reply_markup=markup_reboot)
+
+
+@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "🔁 Reboot now")
+def handle_reboot_now(message):
+    logging.info(f"User {message.from_user.first_name} requested a reboot")
+    bot.reply_to(message, "Rebooting the server.")
+    try:
+        logging.info(f"Rebooting the server.")
+        subprocess.run(f"sudo reboot now", shell=True, check=True)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Rebooting failed. Error: {e}")
+        print(f"Rebooting failed. Error: {e}")
+        bot.reply_to(message, f"Rebooting failed. Error: {e}")
+
+@bot.message_handler(func=lambda message: message.chat.id in ALLOWED_USERS and message.text == "❌ Cancel reboot")
+def handle_cancel_reboot(message):
+    logging.info(f"User {message.from_user.first_name} canceled the reboot")
+    bot.reply_to(message, "Reboot canceled.")
+
+
+@bot.message_handler(commands=['reboot'], func=lambda message: message.chat.id in ALLOWED_USERS)
+def send_handle_reboot(message):
+    handle_reboot_menu(message) 
+ 
     
 def save_server_states_to_json(server_states):
     with open(server_states_json, 'w') as json_file:
