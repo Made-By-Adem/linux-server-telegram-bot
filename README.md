@@ -1,9 +1,9 @@
 # Linux server Telegram bot
-This is a bot lets you control you Linux server using a Telegram bot. I've tested it on Ubuntu 22.04, 22.10 and Raspberry Pi 5, but I'm pretty sure that it will work on any Linux server. The main use case is monitoring critical processes like Docker containers and services you have running on a server. But you can also manually perform some actions on your Linux server. The bot has a menu to choose what you want to do.
+This is a bot that lets you control your Linux server using a Telegram bot. I've tested it on Ubuntu 22.04, 22.10 and Raspberry Pi 5, but I'm pretty sure that it will work on any Linux server. The main use case is monitoring critical processes like Docker containers and services you have running on a server. But you can also manually perform some actions on your Linux server. The bot has a menu to choose what you want to do.
 
 It consists of two services: a monitoring service which will check several parameters, and a bot which allows you to control your Linux server.
 
-It's ideal if you have a single server running, with certain custom services and/or containerized applications and you want to be able you control them on the fly, and having them monitored in an easy way.
+It's ideal if you have a single server running, with certain custom services and/or containerized applications and you want to be able to control them on the fly, and having them monitored in an easy way.
 
 ## Features
 
@@ -56,7 +56,7 @@ It's ideal if you have a single server running, with certain custom services and
 ## Setup
 
 ### Prerequisites
-- A linux server (RapsberryPi, Ubuntu, etc)
+- A Linux server (Raspberry Pi, Ubuntu, etc)
 - A Telegram bot token. You can get one by creating a bot through the [BotFather](https://core.telegram.org/bots#botfather).
 - Python3 installed on the server.
 - The function to check servers/websites uses netcat, so you need to install netcat on the server.
@@ -87,7 +87,7 @@ sudo apt install etherwake stress-ng netcat-traditional
     source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
     ```
 
-    Install the required packages for the nest_bot:
+    Install the required packages for the linux_bot:
 
     ```bash
     pip install -r requirements.txt
@@ -106,7 +106,7 @@ sudo apt install etherwake stress-ng netcat-traditional
     source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
     ```
 
-    Install the required packages for the nest_bot:
+    Install the required packages for the linux_bot:
 
     ```bash
     pip install -r requirements.txt
@@ -123,7 +123,7 @@ sudo apt install etherwake stress-ng netcat-traditional
     ```bash
     cp .env.example .env
     ```   
-    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot. Modify the *main.py* if you add more than one user. Just copy past the CHAT_ID_PERSON1 variable and add more CHAT_ID_PERSON2, CHAT_ID_PERSON3, etc. Add these users to the ALLOWED_USERS list in the main.py of linux_bot and linux_monitoring.
+    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot. Modify the *main.py* if you add more than one user. Just copy paste the CHAT_ID_PERSON1 variable and add more CHAT_ID_PERSON2, CHAT_ID_PERSON3, etc. Add these users to the ALLOWED_USERS list in the main.py of linux_bot and linux_monitoring.
 
     You can obtain your Telegram bot token by creating a bot on https://t.me/BotFather
 
@@ -170,15 +170,15 @@ sudo apt install etherwake stress-ng netcat-traditional
     ```
 
 6. **Modify text files**
-    The linux_bot directory had three text files:
+    The linux_bot directory has three text files:
     - `bot_logfiles.txt` \
-        Copy and past all the paths to the logs on separate lines if you want to have access to through the bot.
+        Copy and paste all the paths to the logs on separate lines if you want to have access to them through the bot.
     - `bot_servers.txt`
         Set all the servers you want to ping on separate lines if you want to be able to ping them through the bot. (Format: name=ipaddress:port) You can also put websites here, but don't use http or https. Use port 80 or 443. eg.: Some URL=some-website.dev:443 
     - `bot_services.txt`
         List all the services you want to check by their names on separate lines if you want to be able to check them through the bot.
 
-    The linux_monitoring directory had three text files:
+    The linux_monitoring directory has three text files:
     - `monitoring_containers.txt`
         List all the containers you want to check by their names on separate lines if you want the bot to monitor them.
     - `monitoring_servers.txt`
@@ -202,7 +202,7 @@ sudo apt install etherwake stress-ng netcat-traditional
 ## Usage
 
 ### Monitoring
-The monitoring service will check all the listed services, servers, containers and certain system info every 5 minutes. When a service or container is down, it will try to restart it. It will inform you when this happens and the restart was successfull.
+The monitoring service will check all the listed services, servers, containers and certain system info every 5 minutes. When a service or container is down, it will try to restart it. It will inform you when this happens and the restart was successful.
 
 It will inform you if the server you listed is online (ping) or not. If not, it will try again within 2 minutes. If the server still did not respond it will tell you so.
 

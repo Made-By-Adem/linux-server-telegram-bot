@@ -241,7 +241,7 @@ def handle_startservice_now(message):
         print(f"Starting {service} failed. Error: {e}")
         bot.reply_to(message, f"Starting {service} failed. Error: {e}")
 
-    # Get all statusses
+    # Get all statuses
     handle_getstatusservices(message)
 
 
@@ -279,7 +279,7 @@ def handle_restartservice_now(message):
         print(f"Restarting {service} failed. Error: {e}")
         bot.reply_to(message, f"Restarting {service} failed. Error: {e}")
 
-    # Get all statusses
+    # Get all statuses
     handle_getstatusservices(message)
 
 # Stop a service
@@ -317,7 +317,7 @@ def handle_stopservice_now(message):
         print(f"Stopping {service} failed. Error: {e}")
         bot.reply_to(message, f"Stopping {service} failed. Error: {e}")
 
-    # Get all statusses
+    # Get all statuses
     handle_getstatusservices(message)
 
 # Start all services
@@ -336,7 +336,7 @@ def handle_startallservices(message):
             print(f"Starting {service} failed. Error: {e}")
             bot.reply_to(message, f"Starting {service} failed. Error: {e}")
 
-    # Get statusses
+    # Get statuses
     handle_getstatusservices(message)
 
 # Restart all services
@@ -355,7 +355,7 @@ def handle_restartallservices(message):
             print(f"Restarting {service} failed. Error: {e}")
             bot.reply_to(message, f"Restarting {service} failed. Error: {e}")
 
-    # Get statusses
+    # Get statuses
     handle_getstatusservices(message)
 
 # Stop all services
@@ -372,7 +372,7 @@ def handle_stopallservices(message):
             print(f"Stopping {service} failed. Error: {e}")
             bot.reply_to(message, f"Stopping {service} failed. Error: {e}")
 
-    # Get statusses
+    # Get statuses
     handle_getstatusservices(message)
 
 
@@ -436,7 +436,7 @@ def handle_getdockerstatus(message):
         logging.error(f"Get status containers failed. Error: {e}")
         print(f"Get status containers failed. Error: {e}")
         bot.reply_to(
-            message, f"Getting container statusses failed. Error: {e}")
+            message, f"Getting container statuses failed. Error: {e}")
 
     # Go to docker menu
     handle_docker_menu(message)
@@ -477,7 +477,7 @@ def handle_startdockercontainer_now(message):
         print(f"Starting {container} failed. Error: {e}")
         bot.reply_to(message, f"Starting {container} failed. Error: {e}")
 
-    # Get all statusses
+    # Get all statuses
     handle_getdockerstatus(message)
 
 # Restart a docker container
@@ -517,7 +517,7 @@ def handle_restartdockercontainer_now(message):
         print(f"Restarting {container} failed. Error: {e}")
         bot.reply_to(message, f"Restarting {container} failed. Error: {e}")
 
-    # Get all statusses
+    # Get all statuses
     handle_getdockerstatus(message)
 
 
@@ -557,7 +557,7 @@ def handle_stopcontainer_now(message):
         print(f"Stopping {container} failed. Error: {e}")
         bot.reply_to(message, f"Stopping {container} failed. Error: {e}")
 
-    # Get all statusses
+    # Get all statuses
     handle_getdockerstatus(message)
 
 # Start all docker containers
@@ -580,7 +580,7 @@ def handle_startalldockercontainers(message):
             print(f"Starting {container} failed. Error: {e}")
             bot.reply_to(message, f"Starting {container} failed. Error: {e}")
 
-    # Get statusses
+    # Get statuses
     handle_getdockerstatus(message)
 
 # Restart all docker containers
@@ -600,7 +600,7 @@ def handle_restartalldockercontainers(message):
             print(f"Restarting {container} failed. Error: {e}")
             bot.reply_to(message, f"Restarting {container} failed. Error: {e}")
 
-    # Get statusses
+    # Get statuses
     handle_getdockerstatus(message)
 
 # Stop all docker containers
@@ -621,7 +621,7 @@ def handle_stopalldockercontainers(message):
             bot.reply_to(message, f"Stopping {container} failed. Error: {e}")
 
     time.sleep(1)
-    # Get statusses
+    # Get statuses
     handle_getdockerstatus(message)
 
 
@@ -647,7 +647,8 @@ def get_docker_names():
     except subprocess.CalledProcessError as e:
         logging.error(f"Getting container names failed. Error: {e}")
         print(f"Getting container names failed. Error: {e}")
-        bot.send_message(f"Getting container names failed. Error: {e}")
+        for chat_id in ALLOWED_USERS:
+            bot.send_message(chat_id, f"Getting container names failed. Error: {e}")
         return []
 
 # LOGS
