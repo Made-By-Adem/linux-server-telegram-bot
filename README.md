@@ -82,43 +82,65 @@ All three services (bot, monitoring, API) share a single `config.yaml` with hot-
 
 ## 🚀 Quick Start
 
-### Docker (Recommended)
+### 1. Get your Telegram credentials
+
+Before you begin, you need two things from Telegram:
+
+1. **Bot token** -- Talk to [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, follow the prompts, and copy the token it gives you
+2. **Your chat ID** -- Talk to [@RawDataBot](https://t.me/raw_data_bot) on Telegram, send `/start`, and copy the `chat_id` number from the response
+
+### 2. Deploy
+
+#### Docker (Recommended)
 
 ```bash
-# 1. Clone repository
 git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
 cd Linux-server-Telegram-bot
 
-# 2. Configure
-cp .env.example .env                # Set bot token, chat ID, WoL settings
-cp config.example.yaml config.yaml  # Adjust services, containers, servers, etc.
-
-# 3. Deploy
-docker compose up -d
-
-# 4. Chat with your bot
-# Send /menu to get started
-```
-
-### Native Python
-
-```bash
-# 1. Clone repository
-git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
-cd Linux-server-Telegram-bot
-
-# 2. Install
-pip install -e .
-
-# 3. Configure
+# Copy example configs
 cp .env.example .env
 cp config.example.yaml config.yaml
+```
 
-# 4. Run
+Now edit `.env` with your credentials:
+
+```env
+SECRET_TOKEN=paste_your_bot_token_here
+CHAT_ID_PERSON1=paste_your_chat_id_here
+```
+
+> [!NOTE]
+> That's all you need to get started. The other `.env` variables (WoL, API key) are optional -- you can configure them later.
+
+Then deploy:
+
+```bash
+docker compose up -d
+```
+
+#### Native Python (Alternative)
+
+```bash
+git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
+cd Linux-server-Telegram-bot
+pip install -e .
+
+cp .env.example .env
+cp config.example.yaml config.yaml
+# Edit .env with your bot token and chat ID (see above)
+
 linux-bot        # Start the bot
 linux-monitor    # Start monitoring (in another terminal)
 linux-api        # Start the HTTP API (in another terminal)
 ```
+
+### 3. Start chatting
+
+1. Open Telegram and search for your bot by the name you gave it in BotFather
+2. Press **Start** or send `/start`
+3. Send `/menu` to open the interactive menu
+
+The bot comes with sensible defaults in `config.example.yaml` -- you can customize containers, services, servers, and more in `config.yaml` whenever you're ready.
 
 ---
 
@@ -130,12 +152,9 @@ linux-api        # Start the HTTP API (in another terminal)
 - **Python:** 3.10+ (or Docker)
 - **Shell:** Bash 4.0+
 
-### Telegram
-
-- Telegram bot token from [@BotFather](https://t.me/BotFather)
-- Your Telegram chat ID from [@RawDataBot](https://t.me/raw_data_bot)
-
 ### Optional System Packages
+
+Only needed if running natively (Docker image includes these):
 
 - `netcat-traditional` - for server ping checks
 - `etherwake` - for Wake-on-LAN
@@ -151,32 +170,34 @@ sudo apt update && sudo apt install netcat-traditional etherwake stress-ng
 
 ### .env (Secrets)
 
-```env
-SECRET_TOKEN=your_bot_token
-CHAT_ID_PERSON1=your_chat_id
-WOL_ADDRESS=aa:bb:cc:dd:ee:ff
-WOL_HOSTNAME=my-device
-API_KEY=your-secret-api-key-here
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SECRET_TOKEN` | **Yes** | Telegram bot token from @BotFather |
+| `CHAT_ID_PERSON1` | **Yes** | Your Telegram chat ID from @RawDataBot |
+| `WOL_ADDRESS` | No | MAC address for Wake-on-LAN |
+| `WOL_HOSTNAME` | No | Hostname for WoL device |
+| `API_KEY` | No | API key for HTTP API access (required if you enable the API) |
 
 ### config.yaml (Everything Else)
 
 All settings are in `config.yaml` with `${VAR}` syntax for environment variable references. See `config.example.yaml` for a complete reference.
 
+> [!TIP]
+> The bot works out of the box with just the `.env` configured. Edit `config.yaml` to customize which containers, services, servers, and log files appear in the bot menus.
+
 **Key sections:**
 
-| Section | Description |
-|---------|-------------|
-| `telegram` | Bot token and allowed user IDs |
-| `features` | Toggle features on/off (hides menu buttons) |
-| `services` | Systemd services manageable via bot |
-| `containers` | Docker containers shown in bot menus |
-| `compose_stacks` | Docker Compose stacks with name and path |
-| `servers` | Servers to ping (name, host, port) |
-| `logfiles` | Log file paths or directories |
-| `scripts` | Paths to update-containers and backup scripts |
-| `api` | API enabled/port/key for HTTP API |
-| `monitoring` | Interval, containers/services/servers to monitor, thresholds |
+| Section | What to configure | Default |
+|---------|-------------------|---------|
+| `features` | Toggle features on/off (hides menu buttons) | All enabled |
+| `services` | Systemd services manageable via bot | docker, ufw, nginx |
+| `containers` | Docker containers shown in bot menus | portainer, nginx |
+| `compose_stacks` | Docker Compose stacks with name and path | Example stack |
+| `servers` | Servers to ping (name, host, port) | Example server |
+| `logfiles` | Log file paths, directories, or glob patterns | Security + system logs |
+| `scripts` | Paths to update-containers and backup scripts | /opt/scripts/ |
+| `api` | API enabled/port/key for HTTP API | Enabled on port 8120 |
+| `monitoring` | Interval, targets, thresholds | 5 min interval |
 
 **Hot-reload**: Edit `config.yaml` while the bot is running -- changes are picked up automatically. Use `/reload` in Telegram to trigger a manual reload.
 
@@ -330,7 +351,23 @@ src/linux_server_bot/
 
 ## 🔄 Integration with linux-server-management-scripts
 
-This bot is designed to work alongside [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts). Configure script paths in `config.yaml`:
+This bot is designed to work alongside [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) for container updates and remote backups. Here's how to set it up:
+
+```bash
+# 1. Clone the scripts repo on your server
+git clone https://github.com/Made-By-Adem/linux-server-management-scripts.git /opt/scripts-repo
+
+# 2. Make scripts executable
+chmod +x /opt/scripts-repo/update-containers/update-containers.sh
+chmod +x /opt/scripts-repo/backup-script/backup.sh
+
+# 3. Symlink to /opt/scripts (or update paths in config.yaml)
+sudo mkdir -p /opt/scripts
+sudo ln -sf /opt/scripts-repo/update-containers/update-containers.sh /opt/scripts/update-containers.sh
+sudo ln -sf /opt/scripts-repo/backup-script/backup.sh /opt/scripts/backup.sh
+```
+
+Then configure the paths in `config.yaml`:
 
 ```yaml
 scripts:
@@ -339,6 +376,9 @@ scripts:
 ```
 
 The bot provides Telegram menus to trigger these scripts with output streaming, dry-run support, and rollback options.
+
+> [!NOTE]
+> This integration is optional. If you don't need container updates or backups via the bot, you can skip this and disable the features in `config.yaml` under `features`.
 
 ---
 
