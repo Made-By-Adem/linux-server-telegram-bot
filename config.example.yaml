@@ -59,10 +59,33 @@ servers:
     host: "1.2.3.4"
     port: 443
 
-# Log file paths or directories
+# Log file paths or directories.
+# Directories are scanned for *.log files (rotated logs are excluded).
+# Remove or comment out any paths that don't exist on your system.
 logfiles:
-  - /var/log/nginx/access.log
-  - /var/log/docker-updates/
+  # -- Security & intrusion detection --
+  - /var/log/auth.log              # SSH logins, sudo, PAM authentication
+  - /var/log/fail2ban.log          # Fail2ban IP bans and jail activity
+  - /var/log/ufw.log               # UFW firewall blocked/allowed traffic
+  - /var/log/rkhunter.log          # Rkhunter rootkit scan results (daily)
+  - /var/log/aide/                 # AIDE file integrity check reports (daily)
+
+  # -- System --
+  - /var/log/syslog                # General system log
+  - /var/log/kern.log              # Kernel messages (hardware, drivers)
+  - /var/log/dpkg.log              # Package installs and updates
+
+  # -- Automatic updates --
+  - /var/log/unattended-upgrades/  # Automatic security update logs
+
+  # -- Docker & containers --
+  - /var/log/docker-updates/       # Container update script logs
+
+  # -- Web server (uncomment if applicable) --
+  # - /var/log/nginx/access.log
+  # - /var/log/nginx/error.log
+  # - /var/log/apache2/access.log
+  # - /var/log/apache2/error.log
 
 # External script paths
 scripts:
