@@ -1,3 +1,27 @@
+# Legacy log directories
 /linux_bot/logs
 /linux_monitoring/logs
+
+# New log directories
+/logs/
+
+# Environment and config
 .env
+config.yaml
+server_states.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/

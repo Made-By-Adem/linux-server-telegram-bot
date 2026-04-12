@@ -1,224 +1,197 @@
-# Linux server Telegram bot
-This is a bot that lets you control your Linux server using a Telegram bot. I've tested it on Ubuntu 22.04, 22.10 and Raspberry Pi 5, but I'm pretty sure that it will work on any Linux server. The main use case is monitoring critical processes like Docker containers and services you have running on a server. But you can also manually perform some actions on your Linux server. The bot has a menu to choose what you want to do.
+# Linux Server Bot
 
-It consists of two services: a monitoring service which will check several parameters, and a bot which allows you to control your Linux server.
+Telegram bot for managing and monitoring Linux servers. Works together with [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) for a complete server management ecosystem.
 
-It's ideal if you have a single server running, with certain custom services and/or containerized applications and you want to be able to control them on the fly, and having them monitored in an easy way.
+Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server. Ideal for a single server running Docker containers and services that you want to monitor and control on the fly.
 
 ## Features
 
-### Monitoring (runs every 5 minutes)
-- Check CPU usage
-- Check memory usage
-- Check disk usage
-- Check temperature
-- Check Docker containers
-- Check services
-- Ping some servers or websites
-- Tries to restart services and docker containers if they fail
-- Sends notifications when something happens
+### Bot (interactive via Telegram)
+- **Docker container management** - start, stop, restart individual or all containers
+- **Docker Compose stack management** - up, down, restart, pull & recreate, view logs
+- **Systemd service management** - start, stop, restart, status
+- **Container updates** - trigger update script with dry-run, rollback support
+- **Remote backup** - trigger backup script, view status and disk usage
+- **Security overview** - Fail2ban, UFW, SSH sessions, failed logins, available updates
+- **System info** - CPU, memory, disk, temperature, fan state, uptime
+- **Server/website ping** - check reachability with state tracking
+- **Log viewer** - browse and download configured log files
+- **Custom commands** - execute shell commands via Telegram
+- **Wake-on-LAN** - wake devices on the same network
+- **Stress test** - run CPU stress tests (requires stress-ng)
+- **Fan control** - toggle fan state
+- **Server reboot** - with confirmation
+- **Config reload** - hot-reload config without restart
 
-### Bot
-- Wake up a Wake on LAN device if in the same network (requires a device supporting Wake on LAN, and etherwake)
-- Manually check services
-- Start, stop or restart services
-- Manually check Docker containers
-- Start, stop or restart Docker containers
-- Check certain logs
-- Send custom commands to server
-- Check system information (stress test option requires stress-ng on the server)
-- Reboot the server
+### Monitoring (automatic, configurable interval)
+- Docker container health + auto-restart
+- Systemd service health + auto-restart
+- Server/website reachability with retry
+- CPU usage with double-verification
+- Temperature monitoring with fan state
+- Storage usage thresholds
+- Failed SSH login detection (brute force alerts)
+- Fail2ban ban notifications
+- Push notifications for all alerts
 
-<center><img src="./example.jpg" alt="Example Linux Telegram Bot" width="300px"></center>
+## Architecture
 
-## Table of Contents
-1. [Linux server Telegram bot](#linux-server-telegram-bot)
-2. [Features](#features)
-   - [Monitoring (runs every 5 minutes)](#monitoring-runs-every-5-minutes)
-   - [Bot](#bot)
-3. [Setup](#setup)
-   - [Prerequisites](#prerequisites)
-   - [Installation](#installation)
-     - [Clone the repository](#clone-the-repository)
-     - [Create virtual environment for monitoring](#create-virtual-environment-for-monitoring)
-     - [Create virtual environment for bot](#create-virtual-environment-for-bot)
-     - [Setup environment variables](#setup-environment-variables)
-     - [Setting up the Systemd service](#setting-up-the-systemd-service)
-     - [Modify text files](#modify-text-files)
-     - [Start services](#start-services)
-4. [Usage](#usage)
-   - [Monitoring](#monitoring)
-   - [Bot](#bot-1)
-5. [Contributing](#contributing)
-6. [License](#license)
-
-
-## Setup
-
-### Prerequisites
-- A Linux server (Raspberry Pi, Ubuntu, etc)
-- A Telegram bot token. You can get one by creating a bot through the [BotFather](https://core.telegram.org/bots#botfather).
-- Python3 installed on the server.
-- The function to check servers/websites uses netcat, so you need to install netcat on the server.
-- If you want to make use of the Wake On Lan feature, you need to install etherwake.
-- If you want to use the stress test feature, you need to install stress-ng.
-
-*Important:* The bot needs admin privileges to use certain features.
-
-**Install etherwake and stress-ng**
-
-```bash
-sudo apt update
-sudo apt install etherwake stress-ng netcat-traditional
+```
+Bot + Monitoring ──> Docker Socket ──> Containers
+                 ──> D-Bus Socket  ──> Systemd Services
+                 ──> Shell Scripts ──> Container Updates / Backups
+                 ──> netcat        ──> Server Pings
 ```
 
-### Installation
+Both services share a single `config.yaml` with hot-reload support via watchdog.
 
-1. **Clone the repository**
-    ```bash
-    git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
-    cd Linux-server-Telegram-bot
-    ```
+## Quick Start (Docker)
 
-2. **Create virtual environment for monitoring**
-    ```bash
-    cd linux_bot
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
+```bash
+git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
+cd Linux-server-Telegram-bot
 
-    Install the required packages for the linux_bot:
+# Configure
+cp .env.example .env           # Set bot token, chat ID, WoL settings
+cp config.example.yaml config.yaml  # Adjust services, containers, servers, etc.
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+# Deploy
+docker compose up -d
 
-    Deactivate the virtual environment:
+# Chat with your bot
+# Send /menu to get started
+```
 
-    ```bash
-    deactivate
-    ```
+## Quick Start (Native Python)
 
-3. **Create virtual environment for bot**
-    ```bash
-    cd linux_monitoring
-    python -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-    ```
+```bash
+git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
+cd Linux-server-Telegram-bot
 
-    Install the required packages for the linux_bot:
+# Install
+pip install -e .
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+# Configure
+cp .env.example .env
+cp config.example.yaml config.yaml
 
-    Deactivate the virtual environment:
+# Run
+linux-bot        # Start the bot
+linux-monitor    # Start monitoring (in another terminal)
+```
 
-    ```bash
-    deactivate
-    ```
+## Prerequisites
 
-4. **Setup environment variables**
-    Copy the `.env.example` file to `.env` and change the variables with your variables. 
-    ```bash
-    cp .env.example .env
-    ```   
-    You can obtain your Telegram chatID by chatting with the Telegram bot @RawDataBot on https://t.me/raw_data_bot. Modify the *main.py* if you add more than one user. Just copy paste the CHAT_ID_PERSON1 variable and add more CHAT_ID_PERSON2, CHAT_ID_PERSON3, etc. Add these users to the ALLOWED_USERS list in the main.py of linux_bot and linux_monitoring.
+- Python 3.10+ (or Docker)
+- Telegram bot token from [@BotFather](https://t.me/BotFather)
+- Your Telegram chat ID from [@RawDataBot](https://t.me/raw_data_bot)
+- `netcat-traditional` - for server ping checks
+- `etherwake` - for Wake-on-LAN (optional)
+- `stress-ng` - for stress tests (optional)
 
-    You can obtain your Telegram bot token by creating a bot on https://t.me/BotFather
+```bash
+sudo apt update && sudo apt install netcat-traditional etherwake stress-ng
+```
 
-5. **Setting up the Systemd service**
-    Modify the service files:
+## Configuration
 
-    Update the `linux_bot.service` file with your actual paths:
-    ```ini
-    [Unit]
-    Description=Linux Bot
-    After=network.target
+### .env (secrets)
 
-    [Service]
-    ExecStart=/your/path/to/linux_bot/venv/bin/python /your/path/to/linux_bot/main.py
-    WorkingDirectory=/your/path/to/linux_bot
-    User=root
-    Restart=always
+```env
+SECRET_TOKEN=your_bot_token
+CHAT_ID_PERSON1=your_chat_id
+WOL_ADDRESS=aa:bb:cc:dd:ee:ff
+WOL_HOSTNAME=my-device
+```
 
-    [Install]
-    WantedBy=multi-user.target
-    ```
+### config.yaml (everything else)
 
-    Update the `linux_monitoring.service` file with your actual paths:
-    ```ini
-    [Unit]
-    Description=Linux Monitoring
-    After=network.target
+All settings are in `config.yaml` with `${VAR}` syntax for environment variable references. See `config.example.yaml` for a complete reference.
 
-    [Service]
-    ExecStart=/your/path/to/linux_monitoring/venv/bin/python /your/path/to/linux_monitoring/main.py
-    WorkingDirectory=/your/path/to/linux_monitoring
-    User=root
-    Restart=always
+Key sections:
 
-    [Install]
-    WantedBy=multi-user.target
-    ```
+| Section | Description |
+|---------|-------------|
+| `telegram` | Bot token and allowed user IDs |
+| `features` | Toggle features on/off (hides menu buttons) |
+| `services` | Systemd services manageable via bot |
+| `containers` | Docker containers shown in bot menus |
+| `compose_stacks` | Docker Compose stacks with name and path |
+| `servers` | Servers to ping (name, host, port) |
+| `logfiles` | Log file paths or directories |
+| `scripts` | Paths to update-containers and backup scripts |
+| `monitoring` | Interval, containers/services/servers to monitor, thresholds |
 
-    Copy the service files to the `/etc/systemd/system/` folder:
+**Hot-reload**: Edit `config.yaml` while the bot is running -- changes are picked up automatically. Use `/reload` in Telegram to trigger a manual reload.
 
-    ```bash
-    cp linux_bot.service /etc/systemd/system/
-    cp linux_monitoring.service /etc/systemd/system/
-    ```
+## Integration with linux-server-management-scripts
 
-6. **Modify text files**
-    The linux_bot directory has three text files:
-    - `bot_logfiles.txt` \
-        Copy and paste all the paths to the logs on separate lines if you want to have access to them through the bot.
-    - `bot_servers.txt`
-        Set all the servers you want to ping on separate lines if you want to be able to ping them through the bot. (Format: name=ipaddress:port) You can also put websites here, but don't use http or https. Use port 80 or 443. eg.: Some URL=some-website.dev:443 
-    - `bot_services.txt`
-        List all the services you want to check by their names on separate lines if you want to be able to check them through the bot.
+Configure script paths in `config.yaml`:
 
-    The linux_monitoring directory has three text files:
-    - `monitoring_containers.txt`
-        List all the containers you want to check by their names on separate lines if you want the bot to monitor them.
-    - `monitoring_servers.txt`
-        Set all the servers you want to ping on separate lines if you want the bot to monitor them. You can also put websites here. Use port 80.
-    - `monitoring_services.txt`
-        List all the services you want to check by their names on separate lines if you want the bot to monitor them.
+```yaml
+scripts:
+  update_containers: /opt/scripts/update-containers.sh
+  backup: /opt/scripts/backup.sh
+```
 
-        **Important:** The bot needs admin privileges to use certain features.
+The bot provides Telegram menus to trigger these scripts with output streaming, dry-run support, and rollback options.
 
-        **Tip:** Add the linux_bot to the `monitoring_services.txt` so that the bot can monitor it as well.
+## Migration from v1
 
-7. **Start services**
-    ```bash
-    sudo systemctl daemon-reload
-    sudo systemctl enable linux_monitoring.service
-    sudo systemctl enable linux_bot.service
-    sudo systemctl start linux_bot.service
-    sudo systemctl start linux_monitoring.service
-    ```
+If upgrading from the text-file configuration:
 
-## Usage
+```bash
+python tools/migrate_config.py
+```
 
-### Monitoring
-The monitoring service will check all the listed services, servers, containers and certain system info every 5 minutes. When a service or container is down, it will try to restart it. It will inform you when this happens and the restart was successful.
+This reads your existing `.txt` files and `.env` to generate a `config.yaml`.
 
-It will inform you if the server you listed is online (ping) or not. If not, it will try again within 2 minutes. If the server still did not respond it will tell you so.
+## Project Structure
 
-It will notify you if your CPU, memory usage, disk usage or temperature is high.
+```
+src/linux_server_bot/
+    config.py              # YAML config + watchdog hot-reload
+    bot/
+        app.py             # Bot entrypoint
+        menus.py           # Keyboard builder helpers
+        handlers/          # One module per feature
+    monitoring/
+        app.py             # Monitoring scheduler
+        checks/            # One module per check type
+    shared/
+        shell.py           # Safe subprocess wrappers
+        auth.py            # Authorization decorator
+        telegram.py        # Messaging helpers
+        logging_setup.py   # Log rotation setup
+```
 
-### Bot
-Send /menu and you will get a menu with all the options:
-- menu - Show the menu
-- start - Start the bot
+## Development
 
-To use the WoL option, you need to install etherwake on your server
+```bash
+pip install -e ".[dev]"
+ruff check src/
+```
 
-To use the stress test option, you need to install stress-ng on your server
+## Bot Commands
+
+| Command | Description |
+|---------|-------------|
+| `/start` | Welcome message |
+| `/menu` | Show interactive menu |
+| `/services` | Service management |
+| `/docker` | Docker container management |
+| `/logs` | View log files |
+| `/ping` | Ping configured servers |
+| `/command` | Execute a shell command |
+| `/sysinfo` | System information |
+| `/wakewol` | Wake-on-LAN |
+| `/reboot` | Reboot server (with confirmation) |
+| `/reload` | Reload config without restart |
 
 ## Contributing
-Feel free to submit issues or pull requests if you have suggestions for improvements or new features. Please follow the existing coding style.
+
+Feel free to submit issues or pull requests. Please follow the existing coding style.
 
 ## License
-This project is licensed under the Custom License. See the [LICENSE](LICENSE) file for more details.
+
+This project is licensed under the Custom License. See the [LICENSE](LICENSE) file for details.

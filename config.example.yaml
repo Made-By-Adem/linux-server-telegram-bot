@@ -1,0 +1,96 @@
+# Linux Server Bot - Configuration
+# Environment variables can be referenced with ${VAR_NAME} syntax.
+# Copy this file to config.yaml and adjust values.
+
+telegram:
+  bot_token: ${SECRET_TOKEN}
+  allowed_users:
+    - ${CHAT_ID_PERSON1}
+
+wol:
+  address: ${WOL_ADDRESS}
+  hostname: ${WOL_HOSTNAME}
+  interface: eth0
+
+# Toggle features on/off. Disabled features hide their menu buttons.
+features:
+  systemd_services: true
+  docker_containers: true
+  docker_compose: true
+  custom_commands: true
+  wol: true
+  security_overview: true
+  backups: true
+  container_updates: true
+  logs: true
+  server_ping: true
+  system_info: true
+  stress_test: true
+  fan_control: true
+  reboot: true
+
+# Systemd services manageable via the bot
+services:
+  - docker
+  - ufw
+  - nginx
+
+# Docker containers shown in bot menus (leave empty to auto-detect)
+containers:
+  - portainer
+  - nginx
+
+# Docker Compose stacks
+compose_stacks:
+  - name: "media-stack"
+    path: /opt/stacks/media
+  - name: "monitoring"
+    path: /opt/stacks/monitoring
+
+# Servers to ping
+servers:
+  - name: "My VPS"
+    host: "1.2.3.4"
+    port: 443
+
+# Log file paths or directories
+logfiles:
+  - /var/log/nginx/access.log
+  - /var/log/docker-updates/
+
+# External script paths
+scripts:
+  update_containers: /opt/scripts/update-containers.sh
+  backup: /opt/scripts/backup.sh
+
+# Path to shared server states file (used by both bot and monitoring)
+server_states_path: server_states.json
+
+# Log directory for the application
+log_directory: ./logs
+
+# Monitoring configuration
+monitoring:
+  interval_minutes: 5
+
+  containers:
+    - portainer
+
+  servers:
+    - name: "My VPS"
+      host: "1.2.3.4"
+      port: 443
+
+  services:
+    - nginx
+    - docker
+
+  thresholds:
+    cpu_percent: 80
+    storage_percent: 90
+    temperature_celsius: 50
+
+  security:
+    check_fail2ban: true
+    check_ufw: true
+    check_ssh_sessions: true
