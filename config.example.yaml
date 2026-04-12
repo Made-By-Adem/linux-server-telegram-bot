@@ -67,7 +67,8 @@ logfiles:
   - /var/log/auth.log              # SSH logins, sudo, PAM authentication
   - /var/log/fail2ban.log          # Fail2ban IP bans and jail activity
   - /var/log/ufw.log               # UFW firewall blocked/allowed traffic
-  - /var/log/rkhunter.log          # Rkhunter rootkit scan results (daily)
+  - /var/log/rkhunter.log           # Rkhunter main log
+  - /var/log/rkhunter-scan-*.log   # Rkhunter scan reports (latest match)
   - /var/log/aide/                 # AIDE file integrity check reports (daily)
 
   # -- System --

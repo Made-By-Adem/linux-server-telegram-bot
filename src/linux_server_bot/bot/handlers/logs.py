@@ -23,9 +23,17 @@ logger = logging.getLogger(__name__)
 _DATE_SUFFIX_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
+def _is_glob(path: str) -> bool:
+    """Check if a path contains glob wildcard characters."""
+    return any(c in path for c in ("*", "?", "["))
+
+
 def _view_log(bot, chat_id: int, log_path: str) -> None:
-    """Read and send a log file (or directory of log files)."""
-    if os.path.isdir(log_path):
+    """Read and send a log file, directory of log files, or glob pattern (latest match)."""
+    if _is_glob(log_path):
+        matches = sorted(glob(log_path), key=os.path.getmtime, reverse=True)
+        log_files = matches[:1]  # most recent match
+    elif os.path.isdir(log_path):
         log_files = glob(os.path.join(log_path, "*.log"))
         log_files = [f for f in log_files if not _DATE_SUFFIX_RE.search(os.path.basename(f))]
     elif os.path.isfile(log_path):
