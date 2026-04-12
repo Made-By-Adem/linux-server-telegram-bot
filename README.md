@@ -266,6 +266,10 @@ open http://localhost:8120/docs
 
 See [SKILL.md](SKILL.md) for the complete endpoint reference.
 
+### AI Agent Integration
+
+The [`agent/`](agent/) directory contains a self-contained kit for integrating AI agents with the API: skill prompts, endpoint schemas with response examples, workflow recipes, and multi-server `.env` configuration. See [`agent/README.md`](agent/README.md) for setup instructions.
+
 ### Cloudflare Tunnel Setup
 
 Add to your existing tunnel config:
