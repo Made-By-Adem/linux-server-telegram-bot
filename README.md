@@ -180,7 +180,7 @@ sudo apt update && sudo apt install netcat-traditional etherwake stress-ng
 | `CHAT_ID_PERSON1` | **Yes** | Your Telegram chat ID from @RawDataBot |
 | `WOL_ADDRESS` | No | MAC address for Wake-on-LAN |
 | `WOL_HOSTNAME` | No | Hostname for WoL device |
-| `API_KEY` | No | API key for HTTP API access (required if you enable the API). Generate one with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `API_KEY` | No | API key for HTTP API access. **Generated automatically** on first API startup -- you don't need to set this yourself |
 
 ### config.yaml (Everything Else)
 
@@ -273,6 +273,8 @@ api:
 ## 🌐 HTTP API
 
 The API runs on `localhost:8120` only -- it's not directly exposed to the internet. For remote access, expose it securely over HTTPS via [Cloudflare Tunnel](#-cloudflare-tunnel-setup-optional). All endpoints (except `/api/health`) require the `X-API-Key` header.
+
+A secure API key is **generated automatically** on first startup and saved to your `.env` file. You can find it there with `grep API_KEY .env`.
 
 ```bash
 # Health check (no auth)
