@@ -23,7 +23,7 @@ Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux se
 Everything happens in **one Telegram chat** -- the bot sends you alerts automatically, and you use the interactive menu to manage your server whenever you need to.
 
 > [!NOTE]
-> The **HTTP API** and **AI agent integration** are optional extras for advanced use cases like multi-server dashboards or automation. Most users only need the Telegram bot.
+> Most users only need the Telegram bot. The **HTTP API** is an optional extra for advanced use cases like multi-server dashboards, automation, or AI agent integration. When enabled, it runs on localhost and can be securely exposed over HTTPS via [Cloudflare Tunnel](#-cloudflare-tunnel-setup-optional).
 
 ---
 
@@ -180,7 +180,7 @@ sudo apt update && sudo apt install netcat-traditional etherwake stress-ng
 | `CHAT_ID_PERSON1` | **Yes** | Your Telegram chat ID from @RawDataBot |
 | `WOL_ADDRESS` | No | MAC address for Wake-on-LAN |
 | `WOL_HOSTNAME` | No | Hostname for WoL device |
-| `API_KEY` | No | API key for HTTP API access (required if you enable the API) |
+| `API_KEY` | No | API key for HTTP API access (required if you enable the API). Generate one with: `python3 -c "import secrets; print(secrets.token_urlsafe(32))"` |
 
 ### config.yaml (Everything Else)
 
@@ -272,7 +272,7 @@ api:
 
 ## 🌐 HTTP API
 
-The API runs on `localhost:8120` and is designed to be exposed via Cloudflare Tunnel. All endpoints (except `/api/health`) require the `X-API-Key` header.
+The API runs on `localhost:8120` only -- it's not directly exposed to the internet. For remote access, expose it securely over HTTPS via [Cloudflare Tunnel](#-cloudflare-tunnel-setup-optional). All endpoints (except `/api/health`) require the `X-API-Key` header.
 
 ```bash
 # Health check (no auth)
@@ -294,16 +294,60 @@ See [SKILL.md](SKILL.md) for the complete endpoint reference.
 
 The [`agent/`](agent/) directory contains a self-contained kit for integrating AI agents with the API: skill prompts, endpoint schemas with response examples, workflow recipes, and multi-server `.env` configuration. See [`agent/README.md`](agent/README.md) for setup instructions.
 
-### Cloudflare Tunnel Setup
+### 🔒 Cloudflare Tunnel Setup (Optional)
 
-Add to your existing tunnel config:
+The API runs on `localhost:8120` -- it's **not exposed to the internet** by default. To access it remotely (e.g., from an AI agent or another server), use a Cloudflare Tunnel. This gives you HTTPS without opening any ports on your firewall.
+
+> [!TIP]
+> If you used [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) to set up your server, you may already have a `cloudflared` container running. You can use that existing tunnel to expose the API.
+
+**Step 1: Add a route for the API**
+
+If you're using a `cloudflared` config file, add a new ingress rule:
 
 ```yaml
 # /etc/cloudflared/config.yml
 ingress:
   - hostname: api-myserver.example.com
     service: http://localhost:8120
+  # ... your other routes ...
+  - service: http_status:404
 ```
+
+Then restart cloudflared to apply:
+
+```bash
+docker restart cloudflared
+# or: sudo systemctl restart cloudflared
+```
+
+**Step 2: Add the DNS record in Cloudflare Dashboard**
+
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com/) → your domain → **DNS**
+2. Add a **CNAME** record:
+   - **Name:** `api-myserver` (or whatever subdomain you chose)
+   - **Target:** your tunnel ID (e.g., `xxxxxxxx-xxxx-xxxx-xxxx.cfargotunnel.com`)
+   - **Proxy:** enabled (orange cloud)
+
+If you're using the Cloudflare Tunnel dashboard instead of a config file:
+1. Go to **Zero Trust** → **Networks** → **Tunnels**
+2. Click your tunnel → **Configure**
+3. Add a **Public Hostname**:
+   - **Subdomain:** `api-myserver`
+   - **Domain:** your domain
+   - **Service:** `http://localhost:8120`
+
+**Step 3: Test it**
+
+```bash
+# Should return {"status": "healthy", "version": "2.0.0"}
+curl https://api-myserver.example.com/api/health
+
+# Authenticated request
+curl -H "X-API-Key: your-key" https://api-myserver.example.com/api/docker/status
+```
+
+Your API is now accessible over HTTPS at `https://api-myserver.example.com`.
 
 ---
 
@@ -387,13 +431,16 @@ The bot provides Telegram menus to trigger these scripts with output streaming, 
 
 ## 🔀 Migration from v1
 
-If upgrading from the text-file configuration:
+If you're upgrading from the old version of this bot (which used `.txt` files like `bot_services.txt`, `bot_servers.txt`, etc.), you can automatically convert your existing configuration to the new `config.yaml` format:
 
 ```bash
 python tools/migrate_config.py
 ```
 
-This reads your existing `.txt` files and `.env` to generate a `config.yaml`.
+This reads your old `.txt` config files and `.env`, and generates a `config.yaml` with all your settings. Review the output and adjust as needed.
+
+> [!NOTE]
+> This is a one-time migration tool. New installations don't need this -- just edit `config.yaml` directly.
 
 ---
 
