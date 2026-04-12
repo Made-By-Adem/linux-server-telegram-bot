@@ -32,7 +32,18 @@ def _view_log(bot, chat_id: int, log_path: str) -> None:
     """Read and send a log file, directory of log files, or glob pattern (latest match)."""
     if _is_glob(log_path):
         matches = sorted(glob(log_path), key=os.path.getmtime, reverse=True)
-        log_files = matches[:1]  # most recent match
+        if not matches:
+            bot.send_message(chat_id, "No log files found.")
+            return
+        if len(matches) == 1:
+            log_files = matches
+        else:
+            recent = [os.path.basename(f) for f in matches[:5]]
+            parent = os.path.dirname(matches[0])
+            full_paths = [os.path.join(parent, f) for f in recent]
+            markup = inline_item_keyboard("logs", "view", full_paths, row_width=1)
+            bot.send_message(chat_id, "Pick a log file (most recent first):", reply_markup=markup)
+            return
     elif os.path.isdir(log_path):
         log_files = glob(os.path.join(log_path, "*.log"))
         log_files = [f for f in log_files if not _DATE_SUFFIX_RE.search(os.path.basename(f))]
