@@ -2,7 +2,10 @@
 
 Manage and monitor your Linux server from your phone via Telegram. Start, stop and restart Docker containers and services, check security logs, view system resources, trigger backups -- all without opening an SSH session.
 
-Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server. Works together with [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) for a complete server management ecosystem.
+Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server.
+
+> [!TIP]
+> **Setting up a new server?** Use [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) first to harden your server (SSH, firewall, Fail2ban, Docker, and 17 security layers), then deploy this bot for ongoing management. The bot integrates directly with the update and backup scripts from that repo.
 
 ### What can you do with it?
 
