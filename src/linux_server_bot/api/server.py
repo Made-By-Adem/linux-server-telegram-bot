@@ -58,19 +58,34 @@ def _ensure_api_key() -> None:
     logger.info("Generated new API key and saved to .env")
 
 
-def _check_port(port: int) -> None:
-    """Check if a port is available. Exit with a clear error if not."""
+def _is_port_free(port: int) -> bool:
+    """Check if a port is available on localhost."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
             s.bind(("127.0.0.1", port))
+            return True
         except OSError:
-            logger.error(
-                "Port %d is already in use. Check what's using it with: "
-                "sudo lsof -i :%d",
-                port,
-                port,
-            )
-            raise SystemExit(1)
+            return False
+
+
+def _find_free_port(preferred: int, max_attempts: int = 10) -> int:
+    """Return *preferred* if free, otherwise try the next ports."""
+    for offset in range(max_attempts):
+        candidate = preferred + offset
+        if _is_port_free(candidate):
+            if offset > 0:
+                logger.warning(
+                    "Port %d is in use, using %d instead",
+                    preferred,
+                    candidate,
+                )
+            return candidate
+    logger.error(
+        "Ports %d-%d are all in use. Free a port or change api.port in config.yaml",
+        preferred,
+        preferred + max_attempts - 1,
+    )
+    raise SystemExit(1)
 
 
 def create_app() -> FastAPI:
@@ -99,12 +114,12 @@ def main() -> None:
     load_config(config_path)
 
     setup_logging("api", config.log_directory)
-    logger.info("Starting Linux Server Bot API on port %d", config.api.port)
 
-    _check_port(config.api.port)
+    port = _find_free_port(config.api.port)
+    logger.info("Starting Linux Server Bot API on port %d", port)
 
     app = create_app()
-    uvicorn.run(app, host="127.0.0.1", port=config.api.port, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
 
 
 if __name__ == "__main__":
