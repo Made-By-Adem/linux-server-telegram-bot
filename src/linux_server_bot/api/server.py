@@ -68,8 +68,12 @@ def _is_port_free(port: int) -> bool:
             return False
 
 
-def _find_free_port(preferred: int, max_attempts: int = 10) -> int:
-    """Return *preferred* if free, otherwise try the next ports."""
+def _find_free_port(preferred: int, max_attempts: int = 20) -> int | None:
+    """Return *preferred* if free, otherwise try the next ports.
+
+    After *max_attempts* failures, ask the user for a port interactively.
+    Returns ``None`` if the user chooses to skip the API.
+    """
     for offset in range(max_attempts):
         candidate = preferred + offset
         if _is_port_free(candidate):
@@ -80,12 +84,33 @@ def _find_free_port(preferred: int, max_attempts: int = 10) -> int:
                     candidate,
                 )
             return candidate
-    logger.error(
-        "Ports %d-%d are all in use. Free a port or change api.port in config.yaml",
-        preferred,
-        preferred + max_attempts - 1,
+
+    # All automatic attempts exhausted — ask the user
+    print(
+        f"\nPorts {preferred}-{preferred + max_attempts - 1} are all in use."
     )
-    raise SystemExit(1)
+    try:
+        answer = input(
+            "Enter a port number to use, or press Enter to skip the API: "
+        ).strip()
+    except (EOFError, KeyboardInterrupt):
+        # Non-interactive environment (e.g. Docker) — skip
+        return None
+
+    if not answer:
+        return None
+
+    try:
+        port = int(answer)
+    except ValueError:
+        print(f"'{answer}' is not a valid port number. Skipping API.")
+        return None
+
+    if _is_port_free(port):
+        return port
+
+    print(f"Port {port} is also in use. Skipping API.")
+    return None
 
 
 def create_app() -> FastAPI:
@@ -116,6 +141,11 @@ def main() -> None:
     setup_logging("api", config.log_directory)
 
     port = _find_free_port(config.api.port)
+    if port is None:
+        logger.info("API skipped — no free port available")
+        print("API disabled. The Telegram bot and monitoring continue to work without it.")
+        return
+
     logger.info("Starting Linux Server Bot API on port %d", port)
 
     app = create_app()
