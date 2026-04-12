@@ -29,6 +29,12 @@ features:
   fan_control: true
   reboot: true
 
+# HTTP API (for multi-server management / AI agent access)
+api:
+  enabled: true
+  port: 8120
+  api_key: ${API_KEY}
+
 # Systemd services manageable via the bot
 services:
   - docker

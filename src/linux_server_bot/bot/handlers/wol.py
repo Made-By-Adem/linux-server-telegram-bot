@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.menus import BTN_WOL, build_confirm_keyboard
+from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.menus import BTN_WOL, inline_confirm_keyboard
+from linux_server_bot.shared.actions.wol import wake_device
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.shell import run_command
 
 if TYPE_CHECKING:
     import telebot
@@ -16,43 +17,47 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_BTN_WAKE = "\U0001f4bb Wake up"
-_BTN_CANCEL = "\u274c Cancel wake up"
-
 
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register WoL handlers."""
 
+    def _handle_callback(bot_inst, call, parts: list[str]) -> None:
+        action = parts[0] if parts else None
+        chat_id = call.message.chat.id
+
+        # "wol:wake:confirm" or "wol:wake:cancel"
+        if action == "wake" and len(parts) > 1:
+            if parts[1] == "confirm":
+                bot_inst.answer_callback_query(call.id, "Sending WoL packet...")
+                bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+                logger.info("User triggered WoL for %s", config.wol.hostname)
+                result = wake_device(config.wol.address, config.wol.interface)
+                if result["success"]:
+                    bot_inst.send_message(chat_id, f"\u2705 Wake-on-LAN packet sent to {config.wol.hostname}.")
+                else:
+                    bot_inst.send_message(chat_id, f"\u26a0\ufe0f WoL failed: {result['error']}")
+                return
+            if parts[1] == "cancel":
+                bot_inst.answer_callback_query(call.id, "Cancelled")
+                bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+                bot_inst.send_message(chat_id, "Wake up canceled.")
+                return
+
+        bot_inst.answer_callback_query(call.id, "Unknown action")
+
+    register_callback("wol", _handle_callback)
+
     @bot.message_handler(func=lambda m: m.text == BTN_WOL)
     @authorized(config)
     def handle_wol_menu(message):
-        markup = build_confirm_keyboard(_BTN_WAKE, _BTN_CANCEL)
         hostname = config.wol.hostname or "device"
+        markup = inline_confirm_keyboard("wol", "wake")
         bot.send_message(
             message.chat.id,
             f"Do you want to wake up <b>{hostname}</b>?",
             reply_markup=markup,
+            parse_mode="HTML",
         )
-
-    @bot.message_handler(func=lambda m: m.text == _BTN_WAKE)
-    @authorized(config)
-    def handle_wol_now(message):
-        logger.info("User %s triggered WoL for %s", message.from_user.first_name, config.wol.hostname)
-        bot.reply_to(message, f"Waking up {config.wol.hostname}...")
-        result = run_command([
-            "sudo", "etherwake", "-i", config.wol.interface, config.wol.address,
-        ])
-        if result.success:
-            bot.send_message(message.chat.id, f"\u2705 Wake-on-LAN packet sent to {config.wol.hostname}.")
-        else:
-            bot.send_message(message.chat.id, f"\u26a0\ufe0f WoL failed: {result.stderr}")
-        show_menu(message)
-
-    @bot.message_handler(func=lambda m: m.text == _BTN_CANCEL)
-    @authorized(config)
-    def handle_wol_cancel(message):
-        bot.reply_to(message, "Wake up canceled.")
-        show_menu(message)
 
     @bot.message_handler(commands=["wakewol"])
     @authorized(config)

@@ -5,9 +5,14 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.menus import BTN_BACK_MAIN, BTN_BACKUPS, build_action_keyboard
+from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.menus import BTN_BACKUPS, inline_action_keyboard
+from linux_server_bot.shared.actions.backups import (
+    get_backup_size,
+    get_backup_status,
+    trigger_backup,
+)
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.shell import run_shell
 from linux_server_bot.shared.telegram import chunk_message, escape_html
 
 if TYPE_CHECKING:
@@ -17,71 +22,74 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_BTN_TRIGGER = "\u25b6\ufe0f Start backup"
-_BTN_STATUS = "\U0001f4cb Backup status"
-_BTN_SIZE = "\U0001f4c0 Backup size"
+_ACTIONS = [
+    ("\u25b6\ufe0f Start backup", "trigger"),
+    ("\U0001f4cb Status", "status"),
+    ("\U0001f4c0 Size", "size"),
+]
 
 
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register backup handlers."""
 
-    def _show_backups_menu(message):
-        actions = [_BTN_TRIGGER, _BTN_STATUS, _BTN_SIZE]
-        markup = build_action_keyboard(actions, BTN_BACK_MAIN, row_width=3)
-        bot.send_message(message.chat.id, "Backup management:", reply_markup=markup)
+    def _send_backups_menu(chat_id: int) -> None:
+        markup = inline_action_keyboard("backups", _ACTIONS, row_width=3)
+        bot.send_message(chat_id, "Backup management:", reply_markup=markup)
 
-    def _check_script():
-        script = config.scripts.backup
-        if not script:
-            return None
-        return script
+    def _handle_callback(bot_inst, call, parts: list[str]) -> None:
+        action = parts[0] if parts else None
+        chat_id = call.message.chat.id
+
+        if action == "cancel":
+            bot_inst.answer_callback_query(call.id, "Cancelled")
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            return
+
+        if action == "trigger":
+            script = config.scripts.backup
+            if not script:
+                bot_inst.answer_callback_query(call.id, "Script not configured")
+                bot_inst.send_message(chat_id, "Backup script not configured in config.yaml (scripts.backup).")
+                return
+            bot_inst.answer_callback_query(call.id, "Starting backup...")
+            bot_inst.send_message(chat_id, "Starting backup (this may take a while)...")
+            result = trigger_backup(script)
+            output = result.get("output", "No output.")
+            for chunk_text in chunk_message(escape_html(output)):
+                bot_inst.send_message(chat_id, chunk_text)
+            icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
+            label = "Backup completed successfully." if result["success"] else "Backup finished with errors."
+            bot_inst.send_message(chat_id, f"{icon} {label}")
+            return
+
+        if action == "status":
+            bot_inst.answer_callback_query(call.id, "Checking status...")
+            result = get_backup_status()
+            output = result.get("output", "No backup status available.")
+            for chunk_text in chunk_message(escape_html(output)):
+                bot_inst.send_message(chat_id, chunk_text, parse_mode=None)
+            return
+
+        if action == "size":
+            bot_inst.answer_callback_query(call.id, "Checking size...")
+            result = get_backup_size()
+            bot_inst.send_message(
+                chat_id,
+                f"<b>Backup disk usage:</b>\n{escape_html(result.get('output', 'N/A'))}",
+                parse_mode="HTML",
+            )
+            return
+
+        bot_inst.answer_callback_query(call.id, "Unknown action")
+
+    register_callback("backups", _handle_callback)
 
     @bot.message_handler(func=lambda m: m.text == BTN_BACKUPS)
     @authorized(config)
     def handle_backups_menu(message):
-        _show_backups_menu(message)
+        _send_backups_menu(message.chat.id)
 
-    @bot.message_handler(func=lambda m: m.text == _BTN_TRIGGER)
+    @bot.message_handler(commands=["backups"])
     @authorized(config)
-    def handle_trigger_backup(message):
-        script = _check_script()
-        if not script:
-            bot.send_message(message.chat.id, "Backup script not configured in config.yaml (scripts.backup).")
-            _show_backups_menu(message)
-            return
-        logger.info("User %s triggered backup", message.from_user.first_name)
-        bot.reply_to(message, "Starting backup (this may take a while)...")
-        result = run_shell(f"sudo {script} 2>&1", timeout=600)
-        output = result.stdout or result.stderr or "No output."
-        for chunk_text in chunk_message(escape_html(output)):
-            bot.send_message(message.chat.id, chunk_text)
-        if result.success:
-            bot.send_message(message.chat.id, "\u2705 Backup completed successfully.")
-        else:
-            bot.send_message(message.chat.id, "\u26a0\ufe0f Backup finished with errors.")
-        _show_backups_menu(message)
-
-    @bot.message_handler(func=lambda m: m.text == _BTN_STATUS)
-    @authorized(config)
-    def handle_backup_status(message):
-        logger.info("User %s requested backup status", message.from_user.first_name)
-        # Check for recent backup logs
-        result = run_shell(
-            "ls -lt /var/log/backup*.log 2>/dev/null | head -5;"
-            " echo '---';"
-            " tail -20 /var/log/backup*.log 2>/dev/null || echo 'No backup logs found.'"
-        )
-        output = result.stdout.strip() or "No backup status available."
-        for chunk_text in chunk_message(escape_html(output)):
-            bot.send_message(message.chat.id, chunk_text, parse_mode=None)
-        _show_backups_menu(message)
-
-    @bot.message_handler(func=lambda m: m.text == _BTN_SIZE)
-    @authorized(config)
-    def handle_backup_size(message):
-        logger.info("User %s requested backup size", message.from_user.first_name)
-        result = run_shell(
-            "du -sh /backup/ 2>/dev/null || du -sh /mnt/backup/ 2>/dev/null || echo 'Backup directory not found.'"
-        )
-        bot.send_message(message.chat.id, f"<b>Backup disk usage:</b>\n{escape_html(result.stdout.strip())}")
-        _show_backups_menu(message)
+    def handle_backups_command(message):
+        _send_backups_menu(message.chat.id)

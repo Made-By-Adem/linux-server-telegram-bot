@@ -1,4 +1,8 @@
-"""Keyboard and menu builder helpers for the Telegram bot."""
+"""Keyboard and menu builder helpers for the Telegram bot.
+
+Main menu uses a persistent ReplyKeyboard (always visible at the bottom).
+Submenu actions use InlineKeyboard (embedded in messages, callback-based).
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,9 @@ from telebot import types
 if TYPE_CHECKING:
     from linux_server_bot.config import AppConfig
 
-# Button labels used across handlers -- single source of truth
+# ---------------------------------------------------------------------------
+# Button labels used by handlers -- single source of truth
+# ---------------------------------------------------------------------------
 BTN_WOL = "\U0001f4bb Wake up WoL"
 BTN_SERVICES = "\U0001f4e6 Services"
 BTN_DOCKER = "\U0001f433   Docker"
@@ -24,10 +30,6 @@ BTN_SECURITY = "\U0001f512 Security"
 BTN_UPDATES = "\U0001f504 Updates"
 BTN_BACKUPS = "\U0001f4be Backups"
 BTN_REBOOT = "\U0001f501 Reboot"
-BTN_BACK_MAIN = "\U0001f519 Go back to main"
-BTN_BACK_SERVICES = "\U0001f519 Go back to services"
-BTN_BACK_DOCKER = "\U0001f519 Go back to docker"
-BTN_BACK_COMPOSE = "\U0001f519 Go back to compose"
 
 # Feature flag -> button label mapping
 _FEATURE_BUTTONS: list[tuple[str, str]] = [
@@ -48,9 +50,18 @@ _FEATURE_BUTTONS: list[tuple[str, str]] = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Main menu -- persistent ReplyKeyboard
+# ---------------------------------------------------------------------------
+
+
 def build_main_menu(config: AppConfig) -> types.ReplyKeyboardMarkup:
-    """Build the main menu keyboard, hiding disabled features."""
-    markup = types.ReplyKeyboardMarkup(row_width=4, one_time_keyboard=True)
+    """Build the main menu keyboard, hiding disabled features.
+
+    Uses ``resize_keyboard=True`` so it stays compact and persistent
+    (no ``one_time_keyboard``).
+    """
+    markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
     buttons = []
     for feature_name, label in _FEATURE_BUTTONS:
         if getattr(config.features, feature_name, True):
@@ -60,46 +71,76 @@ def build_main_menu(config: AppConfig) -> types.ReplyKeyboardMarkup:
     return markup
 
 
-def build_item_keyboard(
-    items: list[str],
-    prefix: str,
-    back_button: str = BTN_BACK_MAIN,
-    row_width: int = 3,
-) -> types.ReplyKeyboardMarkup:
-    """Build a keyboard with one button per item plus a back button.
+# ---------------------------------------------------------------------------
+# Inline keyboards -- used inside messages for submenu actions
+# ---------------------------------------------------------------------------
 
-    Example: build_item_keyboard(["nginx", "docker"], "⏯ Start service:")
-    -> buttons: ["⏯ Start service: nginx", "⏯ Start service: docker", "🔙 Go back"]
+
+def inline_action_keyboard(
+    module: str,
+    actions: list[tuple[str, str]],
+    row_width: int = 3,
+) -> types.InlineKeyboardMarkup:
+    """Build an InlineKeyboard for a module's action menu.
+
+    *actions* is a list of ``(label, action_name)`` tuples.
+    ``callback_data`` format: ``"module:action"``
+    e.g. ``[("Start", "start"), ("Stop", "stop")]`` with module ``"docker"``
+    produces callbacks ``"docker:start"``, ``"docker:stop"``.
     """
-    markup = types.ReplyKeyboardMarkup(row_width=row_width, one_time_keyboard=True)
-    for item in items:
-        markup.add(types.KeyboardButton(f"{prefix} {item}"))
-    markup.add(types.KeyboardButton(back_button))
+    markup = types.InlineKeyboardMarkup(row_width=row_width)
+    buttons = [
+        types.InlineKeyboardButton(label, callback_data=f"{module}:{action}")
+        for label, action in actions
+    ]
+    # Add in rows
+    for i in range(0, len(buttons), row_width):
+        markup.add(*buttons[i : i + row_width])
     return markup
 
 
-def build_action_keyboard(
-    actions: list[str],
-    back_button: str = BTN_BACK_MAIN,
-    row_width: int = 3,
-) -> types.ReplyKeyboardMarkup:
-    """Build a keyboard from a list of action labels plus a back button."""
-    markup = types.ReplyKeyboardMarkup(row_width=row_width, one_time_keyboard=True)
-    buttons = [types.KeyboardButton(a) for a in actions]
-    buttons.append(types.KeyboardButton(back_button))
-    markup.add(*buttons)
-    return markup
-
-
-def build_confirm_keyboard(
-    confirm_text: str,
-    cancel_text: str,
+def inline_item_keyboard(
+    module: str,
+    action: str,
+    items: list[str],
     row_width: int = 2,
-) -> types.ReplyKeyboardMarkup:
-    """Build a simple confirm/cancel keyboard."""
-    markup = types.ReplyKeyboardMarkup(row_width=row_width, one_time_keyboard=True)
+) -> types.InlineKeyboardMarkup:
+    """Build an InlineKeyboard to select an item.
+
+    ``callback_data`` format: ``"module:action:item"``
+    e.g. ``inline_item_keyboard("docker", "start", ["nginx", "redis"])``
+    produces ``"docker:start:nginx"`` and ``"docker:start:redis"``.
+
+    A cancel button is appended automatically.
+    """
+    markup = types.InlineKeyboardMarkup(row_width=row_width)
+    buttons = [
+        types.InlineKeyboardButton(name, callback_data=f"{module}:{action}:{name}")
+        for name in items
+    ]
+    for i in range(0, len(buttons), row_width):
+        markup.add(*buttons[i : i + row_width])
     markup.add(
-        types.KeyboardButton(confirm_text),
-        types.KeyboardButton(cancel_text),
+        types.InlineKeyboardButton("\u274c Cancel", callback_data=f"{module}:cancel"),
+    )
+    return markup
+
+
+def inline_confirm_keyboard(
+    module: str,
+    action: str,
+    target: str = "",
+) -> types.InlineKeyboardMarkup:
+    """Build a confirm / cancel InlineKeyboard.
+
+    ``callback_data``:
+    - confirm: ``"module:action:target:confirm"`` (or ``"module:action:confirm"`` if no target)
+    - cancel:  ``"module:action:target:cancel"``  (or ``"module:action:cancel"``)
+    """
+    base = f"{module}:{action}:{target}" if target else f"{module}:{action}"
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("\u2705 Confirm", callback_data=f"{base}:confirm"),
+        types.InlineKeyboardButton("\u274c Cancel", callback_data=f"{base}:cancel"),
     )
     return markup

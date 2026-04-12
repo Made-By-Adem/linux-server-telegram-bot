@@ -5,15 +5,18 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from linux_server_bot.bot.callbacks import register_callback
 from linux_server_bot.bot.menus import (
-    BTN_BACK_MAIN,
-    BTN_BACK_SERVICES,
     BTN_SERVICES,
-    build_action_keyboard,
-    build_item_keyboard,
+    inline_action_keyboard,
+    inline_item_keyboard,
+)
+from linux_server_bot.shared.actions.services import (
+    get_service_statuses,
+    service_action,
+    service_action_all,
 )
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.shell import run_command
 
 if TYPE_CHECKING:
     import telebot
@@ -22,125 +25,90 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Action menu labels
-_BTN_START = "\U0001f7e9 Start a service"
-_BTN_RESTART = "\U0001f7e8 Restart a service"
-_BTN_STOP = "\U0001f7e5 Stop a service"
-_BTN_START_ALL = "\U0001f7e9\U0001f7e9 Start all services"
-_BTN_RESTART_ALL = "\U0001f7e8\U0001f7e8 Restart all services"
-_BTN_STOP_ALL = "\U0001f7e5\U0001f7e5 Stop all services"
-_BTN_STATUS = "\U0001f7eb Get status services"
+_ACTIONS = [
+    ("\u25b6 Start", "start"),
+    ("\u23f9 Stop", "stop"),
+    ("\U0001f504 Restart", "restart"),
+    ("\u25b6\u25b6 Start all", "start_all"),
+    ("\u23f9\u23f9 Stop all", "stop_all"),
+    ("\U0001f504\U0001f504 Restart all", "restart_all"),
+    ("\U0001f4ca Status", "status"),
+]
+
+
+def _send_services_menu(bot, chat_id: int) -> None:
+    markup = inline_action_keyboard("services", _ACTIONS, row_width=3)
+    bot.send_message(chat_id, "What do you want to do?", reply_markup=markup)
+
+
+def _send_status(bot, chat_id: int, services: list[str]) -> None:
+    statuses = get_service_statuses(services)
+    lines = ["<b>Status services:</b>"]
+    for s in statuses:
+        icon = "\u2705" if s.active else "\u274c"
+        lines.append(f"{icon} {s.name}: {s.state}")
+    bot.send_message(chat_id, "\n".join(lines), parse_mode="HTML")
 
 
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register all service management handlers."""
 
-    def _show_services_menu(message):
-        actions = [_BTN_START, _BTN_RESTART, _BTN_STOP,
-                   _BTN_START_ALL, _BTN_RESTART_ALL, _BTN_STOP_ALL, _BTN_STATUS]
-        markup = build_action_keyboard(actions, back_button=BTN_BACK_MAIN, row_width=3)
-        bot.send_message(message.chat.id, "What do you want to do?", reply_markup=markup)
+    def _handle_callback(bot_inst, call, parts: list[str]) -> None:
+        action = parts[0] if parts else None
+        target = parts[1] if len(parts) > 1 else None
+        chat_id = call.message.chat.id
 
-    def _get_status(message):
-        logger.info("User %s requested service status", message.from_user.first_name)
-        status_msg = "<b>Status services:</b>"
-        for service in config.services:
-            result = run_command(["systemctl", "is-active", service])
-            state = result.stdout.strip() or "unknown"
-            status_msg += f"\n{service}: {state}"
-        bot.send_message(message.chat.id, status_msg, parse_mode="HTML")
-        _show_services_menu(message)
+        if action == "cancel":
+            bot_inst.answer_callback_query(call.id, "Cancelled")
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            return
 
-    def _service_action(message, action: str, service: str):
-        logger.info("User %s requested %s for service %s", message.from_user.first_name, action, service)
-        bot.reply_to(message, f"{action.capitalize()}ing {service}...")
-        result = run_command(["sudo", "systemctl", action, service])
-        if not result.success:
-            bot.reply_to(message, f"{action.capitalize()}ing {service} failed: {result.stderr}")
-        _get_status(message)
+        if action == "status":
+            bot_inst.answer_callback_query(call.id, "Fetching status...")
+            _send_status(bot_inst, chat_id, config.services)
+            return
 
-    def _all_service_action(message, action: str):
-        logger.info("User %s requested %s all services", message.from_user.first_name, action)
-        for service in config.services:
-            bot.reply_to(message, f"{action.capitalize()}ing {service}...")
-            result = run_command(["sudo", "systemctl", action, service])
-            if not result.success:
-                bot.reply_to(message, f"{action.capitalize()}ing {service} failed: {result.stderr}")
-        _get_status(message)
+        if action in ("start", "stop", "restart") and not target:
+            bot_inst.answer_callback_query(call.id)
+            if not config.services:
+                bot_inst.send_message(chat_id, "No services configured.")
+                return
+            markup = inline_item_keyboard("services", action, config.services, row_width=2)
+            bot_inst.send_message(chat_id, f"Which service to {action}?", reply_markup=markup)
+            return
 
-    # Main services menu
+        if action in ("start", "stop", "restart") and target:
+            bot_inst.answer_callback_query(call.id, f"{action.capitalize()}ing {target}...")
+            result = service_action(action, target)
+            icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
+            msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
+            bot_inst.send_message(chat_id, msg)
+            _send_status(bot_inst, chat_id, config.services)
+            return
+
+        if action in ("start_all", "stop_all", "restart_all"):
+            real_action = action.replace("_all", "")
+            bot_inst.answer_callback_query(call.id, f"{real_action.capitalize()}ing all services...")
+            results = service_action_all(real_action, config.services)
+            failures = [r for r in results if not r["success"]]
+            if failures:
+                lines = [f"\u26a0\ufe0f {r['name']}: {r['error']}" for r in failures]
+                bot_inst.send_message(chat_id, "\n".join(lines))
+            _send_status(bot_inst, chat_id, config.services)
+            return
+
+        bot_inst.answer_callback_query(call.id, "Unknown action")
+
+    register_callback("services", _handle_callback)
+
     @bot.message_handler(func=lambda m: m.text == BTN_SERVICES)
     @authorized(config)
     def handle_services_menu(message):
-        _show_services_menu(message)
-
-    @bot.message_handler(func=lambda m: m.text and m.text.startswith(BTN_BACK_SERVICES))
-    @authorized(config)
-    def handle_services_back(message):
-        _show_services_menu(message)
+        _send_status(bot, message.chat.id, config.services)
+        _send_services_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["services"])
     @authorized(config)
     def handle_services_command(message):
-        _show_services_menu(message)
-
-    # Status
-    @bot.message_handler(func=lambda m: m.text == _BTN_STATUS)
-    @authorized(config)
-    def handle_status(message):
-        _get_status(message)
-
-    # Start
-    @bot.message_handler(func=lambda m: m.text == _BTN_START)
-    @authorized(config)
-    def handle_start_menu(message):
-        markup = build_item_keyboard(config.services, "\u23ef Start service:", BTN_BACK_SERVICES)
-        bot.send_message(message.chat.id, "Which service do you want to start?", reply_markup=markup)
-
-    @bot.message_handler(func=lambda m: m.text and m.text.startswith("\u23ef Start service:"))
-    @authorized(config)
-    def handle_start_now(message):
-        service = message.text.split(": ", 1)[1]
-        _service_action(message, "start", service)
-
-    # Restart
-    @bot.message_handler(func=lambda m: m.text == _BTN_RESTART)
-    @authorized(config)
-    def handle_restart_menu(message):
-        markup = build_item_keyboard(config.services, "\U0001f501 Restart service:", BTN_BACK_SERVICES)
-        bot.send_message(message.chat.id, "Which service do you want to restart?", reply_markup=markup)
-
-    @bot.message_handler(func=lambda m: m.text and m.text.startswith("\U0001f501 Restart service:"))
-    @authorized(config)
-    def handle_restart_now(message):
-        service = message.text.split(": ", 1)[1]
-        _service_action(message, "restart", service)
-
-    # Stop
-    @bot.message_handler(func=lambda m: m.text == _BTN_STOP)
-    @authorized(config)
-    def handle_stop_menu(message):
-        markup = build_item_keyboard(config.services, "\u26d4 Stop service:", BTN_BACK_SERVICES)
-        bot.send_message(message.chat.id, "Which service do you want to stop?", reply_markup=markup)
-
-    @bot.message_handler(func=lambda m: m.text and m.text.startswith("\u26d4 Stop service:"))
-    @authorized(config)
-    def handle_stop_now(message):
-        service = message.text.split(": ", 1)[1]
-        _service_action(message, "stop", service)
-
-    # All services
-    @bot.message_handler(func=lambda m: m.text == _BTN_START_ALL)
-    @authorized(config)
-    def handle_start_all(message):
-        _all_service_action(message, "start")
-
-    @bot.message_handler(func=lambda m: m.text == _BTN_RESTART_ALL)
-    @authorized(config)
-    def handle_restart_all(message):
-        _all_service_action(message, "restart")
-
-    @bot.message_handler(func=lambda m: m.text == _BTN_STOP_ALL)
-    @authorized(config)
-    def handle_stop_all(message):
-        _all_service_action(message, "stop")
+        _send_status(bot, message.chat.id, config.services)
+        _send_services_menu(bot, message.chat.id)

@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 from telebot.custom_filters import StateFilter
 
 from linux_server_bot.bot import handlers
-from linux_server_bot.bot.menus import BTN_BACK_MAIN, build_main_menu
+from linux_server_bot.bot.callbacks import setup_callback_router
+from linux_server_bot.bot.menus import build_main_menu
 from linux_server_bot.config import config, load_config, reload_config
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.logging_setup import setup_logging
@@ -76,7 +77,8 @@ def main() -> None:
             "<b>Menu</b> - /menu\n"
             "<b>Start</b> - /start"
         )
-        bot.send_message(message.chat.id, welcome)
+        markup = build_main_menu(config)
+        bot.send_message(message.chat.id, welcome, reply_markup=markup, parse_mode="HTML")
 
     @bot.message_handler(commands=["menu"])
     @authorized(config)
@@ -95,11 +97,8 @@ def main() -> None:
     for module in _HANDLER_MODULES:
         module.register(bot, config, show_menu)
 
-    # Go back to main (must be after feature-specific back handlers)
-    @bot.message_handler(func=lambda m: m.text == BTN_BACK_MAIN)
-    @authorized(config)
-    def handle_go_back(message):
-        show_menu(message)
+    # Setup the central callback query router (must be after handler registration)
+    setup_callback_router(bot, config)
 
     # Catch-all handler (must be registered LAST)
     @bot.message_handler(func=lambda m: True)

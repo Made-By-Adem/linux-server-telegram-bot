@@ -14,6 +14,8 @@ dependencies = [
     "schedule>=1.2",
     "pyyaml>=6.0",
     "watchdog>=3.0",
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +24,7 @@ dev = ["ruff>=0.1"]
 [project.scripts]
 linux-bot = "linux_server_bot.bot.app:main"
 linux-monitor = "linux_server_bot.monitoring.app:main"
+linux-api = "linux_server_bot.api.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

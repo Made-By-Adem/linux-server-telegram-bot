@@ -8,7 +8,8 @@ import re
 from glob import glob
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.menus import BTN_BACK_MAIN, BTN_LOGS, build_item_keyboard
+from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.menus import BTN_LOGS, inline_item_keyboard
 from linux_server_bot.shared.auth import authorized
 
 if TYPE_CHECKING:
@@ -22,61 +23,72 @@ logger = logging.getLogger(__name__)
 _DATE_SUFFIX_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
+def _view_log(bot, chat_id: int, log_path: str) -> None:
+    """Read and send a log file (or directory of log files)."""
+    if os.path.isdir(log_path):
+        log_files = glob(os.path.join(log_path, "*.log"))
+        log_files = [f for f in log_files if not _DATE_SUFFIX_RE.search(os.path.basename(f))]
+    elif os.path.isfile(log_path):
+        log_files = [log_path]
+    else:
+        bot.send_message(chat_id, "Log path not found.")
+        return
+
+    if not log_files:
+        bot.send_message(chat_id, "No log files found.")
+        return
+
+    for log_file in log_files:
+        try:
+            with open(log_file, "rb") as f:
+                bot.send_document(chat_id, f)
+            with open(log_file, "r") as f:
+                lines = f.readlines()
+                tail = "".join(lines[-20:])
+                if tail.strip():
+                    bot.send_message(chat_id, f"Last 20 lines of {os.path.basename(log_file)}:")
+                    bot.send_message(chat_id, tail, parse_mode=None)
+        except Exception:
+            logger.exception("Failed to read log file: %s", log_file)
+            bot.send_message(chat_id, f"Failed to read {log_file}")
+
+
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register log viewing handlers."""
 
-    def _show_logs_menu(message):
-        markup = build_item_keyboard(config.logfiles, "\U0001f4dc Log:", BTN_BACK_MAIN, row_width=4)
-        bot.send_message(message.chat.id, "Which log file do you want to see?", reply_markup=markup)
+    def _send_logs_menu(chat_id: int) -> None:
+        if not config.logfiles:
+            bot.send_message(chat_id, "No log files configured.")
+            return
+        markup = inline_item_keyboard("logs", "view", config.logfiles, row_width=1)
+        bot.send_message(chat_id, "Which log file do you want to see?", reply_markup=markup)
+
+    def _handle_callback(bot_inst, call, parts: list[str]) -> None:
+        action = parts[0] if parts else None
+        target = ":".join(parts[1:]) if len(parts) > 1 else None
+        chat_id = call.message.chat.id
+
+        if action == "cancel":
+            bot_inst.answer_callback_query(call.id, "Cancelled")
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            return
+
+        if action == "view" and target:
+            bot_inst.answer_callback_query(call.id, f"Loading {target}...")
+            logger.info("User requested log: %s", target)
+            _view_log(bot_inst, chat_id, target)
+            return
+
+        bot_inst.answer_callback_query(call.id, "Unknown action")
+
+    register_callback("logs", _handle_callback)
 
     @bot.message_handler(func=lambda m: m.text == BTN_LOGS)
     @authorized(config)
     def handle_logs_menu(message):
-        _show_logs_menu(message)
+        _send_logs_menu(message.chat.id)
 
     @bot.message_handler(commands=["logs"])
     @authorized(config)
     def handle_logs_command(message):
-        _show_logs_menu(message)
-
-    @bot.message_handler(func=lambda m: m.text and m.text.startswith("\U0001f4dc Log: "))
-    @authorized(config)
-    def handle_log_view(message):
-        log_path = message.text.split(": ", 1)[1]
-        logger.info("User %s requested log: %s", message.from_user.first_name, log_path)
-
-        # If it's a directory, find .log files inside
-        if os.path.isdir(log_path):
-            log_files = glob(os.path.join(log_path, "*.log"))
-            # Filter out date-rotated files
-            log_files = [f for f in log_files if not _DATE_SUFFIX_RE.search(os.path.basename(f))]
-        elif os.path.isfile(log_path):
-            log_files = [log_path]
-        else:
-            bot.send_message(message.chat.id, "Log path not found.")
-            _show_logs_menu(message)
-            return
-
-        if not log_files:
-            bot.send_message(message.chat.id, "No log files found.")
-            _show_logs_menu(message)
-            return
-
-        for log_file in log_files:
-            try:
-                # Send as document
-                with open(log_file, "rb") as f:
-                    bot.send_document(message.chat.id, f)
-
-                # Also send last 20 lines
-                with open(log_file, "r") as f:
-                    lines = f.readlines()
-                    tail = "".join(lines[-20:])
-                    if tail.strip():
-                        bot.send_message(message.chat.id, f"Last 20 lines of {os.path.basename(log_file)}:")
-                        bot.send_message(message.chat.id, tail, parse_mode=None)
-            except Exception:
-                logger.exception("Failed to read log file: %s", log_file)
-                bot.send_message(message.chat.id, f"Failed to read {log_file}")
-
-        _show_logs_menu(message)
+        _send_logs_menu(message.chat.id)

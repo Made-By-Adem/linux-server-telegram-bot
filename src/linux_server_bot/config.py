@@ -95,6 +95,13 @@ class FeaturesConfig:
 
 
 @dataclass
+class ApiConfig:
+    enabled: bool = False
+    port: int = 8120
+    api_key: str = ""
+
+
+@dataclass
 class ScriptsConfig:
     update_containers: str = ""
     backup: str = ""
@@ -115,6 +122,7 @@ class AppConfig:
     logfiles: list[str] = field(default_factory=list)
     scripts: ScriptsConfig = field(default_factory=ScriptsConfig)
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
+    api: ApiConfig = field(default_factory=ApiConfig)
     server_states_path: str = "server_states.json"
     log_directory: str = "./logs"
 
@@ -167,6 +175,14 @@ class AppConfig:
         self.scripts = ScriptsConfig(
             update_containers=str(scripts.get("update_containers", "")),
             backup=str(scripts.get("backup", "")),
+        )
+
+        # API
+        api_data = data.get("api", {})
+        self.api = ApiConfig(
+            enabled=bool(api_data.get("enabled", False)),
+            port=int(api_data.get("port", 8120)),
+            api_key=str(api_data.get("api_key", "")),
         )
 
         # Monitoring

@@ -34,16 +34,24 @@ Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux se
 - Fail2ban ban notifications
 - Push notifications for all alerts
 
+### HTTP API (multi-server management)
+- **REST API** on `localhost:8120` with API key authentication
+- All bot functionality available as HTTP endpoints
+- Swagger UI at `/docs` for interactive exploration
+- Designed for Cloudflare Tunnel exposure (no open ports needed)
+- Ideal for AI agent / automation integration across multiple servers
+
 ## Architecture
 
 ```
-Bot + Monitoring ──> Docker Socket ──> Containers
-                 ──> D-Bus Socket  ──> Systemd Services
-                 ──> Shell Scripts ──> Container Updates / Backups
-                 ──> netcat        ──> Server Pings
+Bot        ──┐
+Monitoring ──┤──> shared/actions/ ──> Docker Socket ──> Containers
+API        ──┘                   ──> D-Bus Socket  ──> Systemd Services
+                                 ──> Shell Scripts ──> Container Updates / Backups
+                                 ──> netcat        ──> Server Pings
 ```
 
-Both services share a single `config.yaml` with hot-reload support via watchdog.
+All three services (bot, monitoring, API) share a single `config.yaml` with hot-reload support via watchdog, and use the same `shared/actions/` layer for business logic.
 
 ## Quick Start (Docker)
 
@@ -78,6 +86,7 @@ cp config.example.yaml config.yaml
 # Run
 linux-bot        # Start the bot
 linux-monitor    # Start monitoring (in another terminal)
+linux-api        # Start the HTTP API (in another terminal)
 ```
 
 ## Prerequisites
@@ -102,6 +111,7 @@ SECRET_TOKEN=your_bot_token
 CHAT_ID_PERSON1=your_chat_id
 WOL_ADDRESS=aa:bb:cc:dd:ee:ff
 WOL_HOSTNAME=my-device
+API_KEY=your-secret-api-key-here
 ```
 
 ### config.yaml (everything else)
@@ -120,6 +130,7 @@ Key sections:
 | `servers` | Servers to ping (name, host, port) |
 | `logfiles` | Log file paths or directories |
 | `scripts` | Paths to update-containers and backup scripts |
+| `api` | API enabled/port/key for HTTP API |
 | `monitoring` | Interval, containers/services/servers to monitor, thresholds |
 
 **Hot-reload**: Edit `config.yaml` while the bot is running -- changes are picked up automatically. Use `/reload` in Telegram to trigger a manual reload.
@@ -146,6 +157,37 @@ python tools/migrate_config.py
 
 This reads your existing `.txt` files and `.env` to generate a `config.yaml`.
 
+## HTTP API
+
+The API runs on `localhost:8120` and is designed to be exposed via Cloudflare Tunnel. All endpoints (except `/api/health`) require the `X-API-Key` header.
+
+```bash
+# Health check (no auth)
+curl http://localhost:8120/api/health
+
+# Get container status
+curl -H "X-API-Key: your-key" http://localhost:8120/api/docker/status
+
+# Restart a container
+curl -X POST -H "X-API-Key: your-key" http://localhost:8120/api/docker/restart/nginx
+
+# Interactive docs
+open http://localhost:8120/docs
+```
+
+See [SKILL.md](SKILL.md) for the complete endpoint reference.
+
+### Cloudflare Tunnel Setup
+
+Add to your existing tunnel config:
+
+```yaml
+# /etc/cloudflared/config.yml
+ingress:
+  - hostname: api-myserver.example.com
+    service: http://localhost:8120
+```
+
 ## Project Structure
 
 ```
@@ -154,15 +196,21 @@ src/linux_server_bot/
     bot/
         app.py             # Bot entrypoint
         menus.py           # Keyboard builder helpers
+        callbacks.py       # Central InlineKeyboard callback router
         handlers/          # One module per feature
     monitoring/
         app.py             # Monitoring scheduler
         checks/            # One module per check type
+    api/
+        server.py          # FastAPI app + uvicorn entrypoint
+        auth.py            # API key authentication
+        routes.py          # All REST endpoints
     shared/
         shell.py           # Safe subprocess wrappers
         auth.py            # Authorization decorator
         telegram.py        # Messaging helpers
         logging_setup.py   # Log rotation setup
+        actions/           # Business logic shared by bot + API
 ```
 
 ## Development

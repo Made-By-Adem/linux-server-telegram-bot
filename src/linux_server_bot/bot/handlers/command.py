@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from telebot.handler_backends import State, StatesGroup
 
+from linux_server_bot.bot.menus import BTN_COMMAND
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.shell import run_shell
 from linux_server_bot.shared.telegram import chunk_message, escape_html
@@ -25,8 +26,6 @@ class CommandStates(StatesGroup):
 
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register custom command execution handlers."""
-
-    from linux_server_bot.bot.menus import BTN_COMMAND
 
     @bot.message_handler(func=lambda m: m.text == BTN_COMMAND)
     @authorized(config)
@@ -51,7 +50,6 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if command.lower() in ("/cancel", "cancel"):
             bot.reply_to(message, "Command canceled.")
-            show_menu(message)
             return
 
         bot.reply_to(message, f"Sending command: {command}")
