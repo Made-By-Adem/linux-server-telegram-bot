@@ -1,68 +1,53 @@
 # Linux Server Bot
 
-Telegram bot for managing and monitoring Linux servers. Works together with [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) for a complete server management ecosystem.
+Manage and monitor your Linux server from your phone via Telegram. Start, stop and restart Docker containers and services, check security logs, view system resources, trigger backups -- all without opening an SSH session.
 
-Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server. Ideal for a single server running Docker containers and services that you want to monitor and control on the fly.
+Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server. Works together with [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) for a complete server management ecosystem.
+
+### What can you do with it?
+
+- **Manage Docker** -- start, stop, restart containers and Compose stacks from Telegram
+- **Manage services** -- control systemd services (nginx, docker, ufw, etc.)
+- **Monitor your server** -- get automatic alerts when a container crashes, a service goes down, CPU spikes, disk fills up, or someone tries to brute-force SSH
+- **Check security** -- view Fail2ban bans, UFW rules, SSH sessions, failed logins, and available updates
+- **View system info** -- CPU, memory, disk, temperature, uptime
+- **Browse logs** -- read rkhunter scans, auth.log, fail2ban, syslog, and more directly in Telegram
+- **Trigger updates & backups** -- run your update and backup scripts with dry-run and rollback support
+- **Ping servers** -- check if your other servers and websites are reachable
+- **Execute commands** -- run any shell command from Telegram when you need it
+- **Wake-on-LAN** -- wake devices on the same network
+
+> [!NOTE]
+> The **Telegram bot** and **monitoring** are the core of this project -- that's all most users need. The **HTTP API** and **AI agent integration** are optional extras for advanced use cases like multi-server dashboards or automation via AI agents.
 
 ---
 
 ## 📦 What's Inside?
 
-This repository contains three complementary services:
-
 ### 1. Bot (Interactive via Telegram)
 
-Control your server from your phone with an interactive menu and inline buttons.
+Control your server from your phone with an interactive menu and inline buttons. This is the main component.
 
-**Key Features:**
-
-- **Docker container management** - start, stop, restart individual or all containers
-- **Docker Compose stack management** - up, down, restart, pull & recreate, view logs
-- **Systemd service management** - start, stop, restart, status
-- **Container updates** - trigger update script with dry-run, rollback support
-- **Remote backup** - trigger backup script, view status and disk usage
-- **Security overview** - Fail2ban, UFW, SSH sessions, failed logins, available updates
-- **System info** - CPU, memory, disk, temperature, fan state, uptime
-- **Server/website ping** - check reachability with state tracking
-- **Log viewer** - browse and download configured log files
-- **Custom commands** - execute shell commands via Telegram
-- **Wake-on-LAN** - wake devices on the same network
-- **Stress test** - run CPU stress tests (requires stress-ng)
-- **Fan control** - toggle fan state
-- **Server reboot** - with confirmation
-- **Config reload** - hot-reload config without restart
+**Features:** Docker containers, Compose stacks, systemd services, security overview, system info, log viewer, server ping, container updates, backups, custom commands, Wake-on-LAN, stress test, fan control, reboot, config reload.
 
 ---
 
 ### 2. Monitoring (Automatic, Configurable Interval)
 
-Runs in the background and sends push notifications when something needs attention.
+Runs in the background and sends Telegram push notifications when something needs attention.
 
-**Key Features:**
-
-- Docker container health + auto-restart
-- Systemd service health + auto-restart
-- Server/website reachability with retry
-- CPU usage with double-verification
-- Temperature monitoring with fan state
-- Storage usage thresholds
-- Failed SSH login detection (brute force alerts)
-- Fail2ban ban notifications
-- Push notifications for all alerts
+**Features:** Container health + auto-restart, service health + auto-restart, server reachability, CPU/temperature/storage thresholds, failed SSH login detection, Fail2ban ban notifications.
 
 ---
 
-### 3. HTTP API (Multi-Server Management)
+### 3. HTTP API (Optional)
 
-REST API for automation and AI agent integration across multiple servers.
+REST API that exposes all bot functionality as HTTP endpoints. Useful if you want to build a dashboard, integrate with other tools, or let an AI agent manage your servers.
 
-**Key Features:**
-
-- **REST API** on `localhost:8120` with API key authentication
-- All bot functionality available as HTTP endpoints
+- REST API on `localhost:8120` with API key authentication
 - Swagger UI at `/docs` for interactive exploration
 - Designed for Cloudflare Tunnel exposure (no open ports needed)
-- Ideal for AI agent / automation integration across multiple servers
+- See [`agent/`](agent/) for AI agent integration kit
 
 ---
 
