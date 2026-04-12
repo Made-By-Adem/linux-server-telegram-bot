@@ -9,6 +9,7 @@
 .env
 config.yaml
 server_states.json
+.setup_state.json
 
 # Python
 __pycache__/

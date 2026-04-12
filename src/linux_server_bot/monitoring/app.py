@@ -12,6 +12,12 @@ from dotenv import load_dotenv
 from linux_server_bot.config import config, load_config
 from linux_server_bot.monitoring.checks import containers, security, servers, services, system
 from linux_server_bot.shared.logging_setup import setup_logging
+from linux_server_bot.shared.startup import (
+    ensure_env,
+    print_banner,
+    run_preflight_checks,
+    setup_graceful_shutdown,
+)
 from linux_server_bot.shared.telegram import create_bot
 
 logger = logging.getLogger(__name__)
@@ -47,11 +53,27 @@ def main() -> None:
     """Main entry point for the monitoring service."""
     load_dotenv()
 
+    # Ensure .env is configured
+    env_path = os.path.join(os.getcwd(), ".env")
+    ensure_env(env_path)
+
+    # Graceful shutdown on SIGINT/SIGTERM
+    setup_graceful_shutdown()
+
     config_path = os.environ.get("CONFIG_PATH", "config.yaml")
     load_config(config_path)
 
     setup_logging("monitoring", config.log_directory)
     logger.info("Starting Linux Server Monitor v2.0.0")
+
+    # Preflight checks
+    checks = run_preflight_checks(config_path, config.bot_token)
+    if not checks["bot_token"]:
+        logger.error("Cannot start monitoring without a valid bot token. Exiting.")
+        raise SystemExit(1)
+
+    # Startup banner
+    print_banner("Monitoring", config)
 
     bot = create_bot(config.bot_token)
 

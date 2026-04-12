@@ -15,6 +15,12 @@ from linux_server_bot.bot.menus import build_main_menu
 from linux_server_bot.config import config, load_config, reload_config
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.logging_setup import setup_logging
+from linux_server_bot.shared.startup import (
+    ensure_env,
+    print_banner,
+    run_preflight_checks,
+    setup_graceful_shutdown,
+)
 from linux_server_bot.shared.telegram import create_bot
 
 logger = logging.getLogger(__name__)
@@ -50,6 +56,13 @@ def main() -> None:
     """Main entry point for the bot."""
     load_dotenv()
 
+    # Ensure .env is configured (runs setup wizard on first run)
+    env_path = os.path.join(os.getcwd(), ".env")
+    ensure_env(env_path)
+
+    # Graceful shutdown on SIGINT/SIGTERM
+    setup_graceful_shutdown()
+
     # Load config (starts watchdog file watcher)
     config_path = os.environ.get("CONFIG_PATH", "config.yaml")
     load_config(config_path)
@@ -57,6 +70,15 @@ def main() -> None:
     # Setup logging
     setup_logging("bot", config.log_directory)
     logger.info("Starting Linux Server Bot v2.0.0")
+
+    # Preflight checks
+    checks = run_preflight_checks(config_path, config.bot_token)
+    if not checks["bot_token"]:
+        logger.error("Cannot start bot without a valid token. Exiting.")
+        raise SystemExit(1)
+
+    # Startup banner
+    print_banner("Bot", config)
 
     # Create bot
     bot = create_bot(config.bot_token)
