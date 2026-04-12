@@ -11,7 +11,7 @@ Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux se
 
 - **Manage Docker** -- start, stop, restart containers and Compose stacks from Telegram
 - **Manage services** -- control systemd services (nginx, docker, ufw, etc.)
-- **Monitor your server** -- get automatic alerts when a container crashes, a service goes down, CPU spikes, disk fills up, or someone tries to brute-force SSH
+- **Get automatic alerts** -- the bot watches your server in the background and notifies you when a container crashes, a service goes down, CPU spikes, disk fills up, or someone tries to brute-force SSH. Crashed containers and services are automatically restarted.
 - **Check security** -- view Fail2ban bans, UFW rules, SSH sessions, failed logins, and available updates
 - **View system info** -- CPU, memory, disk, temperature, uptime
 - **Browse logs** -- read rkhunter scans, auth.log, fail2ban, syslog, and more directly in Telegram
@@ -20,32 +20,45 @@ Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux se
 - **Execute commands** -- run any shell command from Telegram when you need it
 - **Wake-on-LAN** -- wake devices on the same network
 
+Everything happens in **one Telegram chat** -- the bot sends you alerts automatically, and you use the interactive menu to manage your server whenever you need to.
+
 > [!NOTE]
-> The **Telegram bot** and **monitoring** are the core of this project -- that's all most users need. The **HTTP API** and **AI agent integration** are optional extras for advanced use cases like multi-server dashboards or automation via AI agents.
+> The **HTTP API** and **AI agent integration** are optional extras for advanced use cases like multi-server dashboards or automation. Most users only need the Telegram bot.
 
 ---
 
-## 📦 What's Inside?
+## 📦 How It Works
 
-### 1. Bot (Interactive via Telegram)
+The bot has two sides, both in the same Telegram chat:
 
-Control your server from your phone with an interactive menu and inline buttons. This is the main component.
+### 🎛️ Interactive Menu
 
-**Features:** Docker containers, Compose stacks, systemd services, security overview, system info, log viewer, server ping, container updates, backups, custom commands, Wake-on-LAN, stress test, fan control, reboot, config reload.
+Open the menu with `/menu` or a bot command and manage your server on-demand: start/stop containers, check security, view logs, trigger updates, etc. The main menu stays visible at the bottom of the chat, with inline buttons for actions.
 
----
+**What you can control:** Docker containers, Compose stacks, systemd services, security overview, system info, log viewer, server ping, container updates, backups, custom commands, Wake-on-LAN, stress test, fan control, reboot, config reload.
 
-### 2. Monitoring (Automatic, Configurable Interval)
+### 📡 Background Monitoring
 
-Runs in the background and sends Telegram push notifications when something needs attention.
+The bot continuously watches your server and sends you a message when something needs attention. Crashed containers and services are automatically restarted.
 
-**Features:** Container health + auto-restart, service health + auto-restart, server reachability, CPU/temperature/storage thresholds, failed SSH login detection, Fail2ban ban notifications.
+**What it monitors:**
 
----
+| Check | What happens |
+|-------|-------------|
+| Docker containers | Alert + auto-restart if a container stops |
+| Systemd services | Alert + auto-restart if a service fails |
+| Server/website ping | Alert when a server goes offline or comes back online |
+| CPU usage | Alert when CPU exceeds threshold (double-verified, shows top processes) |
+| Temperature | Alert when temperature exceeds threshold (reports fan state) |
+| Disk usage | Alert when storage exceeds threshold |
+| SSH failed logins | Alert on brute force attempts (>10 failures) |
+| Fail2ban bans | Alert when an IP gets banned |
 
-### 3. HTTP API (Optional)
+Monitoring interval, thresholds, and which containers/services/servers to watch are all configurable in `config.yaml`.
 
-REST API that exposes all bot functionality as HTTP endpoints. Useful if you want to build a dashboard, integrate with other tools, or let an AI agent manage your servers.
+### 🌐 HTTP API (Optional)
+
+For advanced users: a REST API that exposes all bot functionality as HTTP endpoints. Useful if you want to build a dashboard, integrate with other tools, or let an AI agent manage multiple servers.
 
 - REST API on `localhost:8120` with API key authentication
 - Swagger UI at `/docs` for interactive exploration
@@ -56,15 +69,18 @@ REST API that exposes all bot functionality as HTTP endpoints. Useful if you wan
 
 ## 🏗️ Architecture
 
+Under the hood, the bot runs as two processes (interactive + monitoring) that share the same config and business logic. The optional API is a third process.
+
 ```
-Bot        ──┐
-Monitoring ──┤──> shared/actions/ ──> Docker Socket ──> Containers
-API        ──┘                   ──> D-Bus Socket  ──> Systemd Services
-                                 ──> Shell Scripts ──> Container Updates / Backups
-                                 ──> netcat        ──> Server Pings
+Telegram Chat
+  ├── Interactive menu  ──┐
+  └── Monitoring alerts ──┤──> shared/actions/ ──> Docker Socket ──> Containers
+                          │                    ──> D-Bus Socket  ──> Systemd Services
+  HTTP API (optional)  ───┘                    ──> Shell Scripts ──> Updates / Backups
+                                               ──> netcat        ──> Server Pings
 ```
 
-All three services (bot, monitoring, API) share a single `config.yaml` with hot-reload support via watchdog, and use the same `shared/actions/` layer for business logic.
+All processes share a single `config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
 
 ---
 
@@ -100,7 +116,7 @@ CHAT_ID_PERSON1=paste_your_chat_id_here
 > [!NOTE]
 > That's all you need to get started. The other `.env` variables (WoL, API key) are optional -- you can configure them later.
 
-Then deploy:
+Then deploy (this starts the bot, monitoring, and API together):
 
 ```bash
 docker compose up -d
@@ -117,9 +133,9 @@ cp .env.example .env
 cp config.example.yaml config.yaml
 # Edit .env with your bot token and chat ID (see above)
 
-linux-bot        # Start the bot
-linux-monitor    # Start monitoring (in another terminal)
-linux-api        # Start the HTTP API (in another terminal)
+linux-bot        # Start the interactive bot
+linux-monitor    # Start background monitoring (in another terminal)
+linux-api        # Start the HTTP API (optional, in another terminal)
 ```
 
 ### 3. Start chatting
@@ -236,22 +252,21 @@ api:
 
 ---
 
-## 🔍 Features Comparison
+## 🔍 Features Overview
 
-| Feature | Bot | Monitoring | API |
-|---------|-----|------------|-----|
-| Docker management | ✅ | ✅ (health checks) | ✅ |
-| Service management | ✅ | ✅ (health checks) | ✅ |
-| Compose stacks | ✅ | ❌ | ✅ |
-| System info | ✅ | ✅ (alerts) | ✅ |
-| Security overview | ✅ | ✅ (brute force alerts) | ✅ |
-| Server ping | ✅ | ✅ (reachability) | ✅ |
-| Wake-on-LAN | ✅ | ❌ | ✅ |
-| Custom commands | ✅ | ❌ | ✅ |
-| Log viewer | ✅ | ❌ | ❌ |
-| Auto-restart | ❌ | ✅ | ❌ |
-| Push notifications | ❌ | ✅ | ❌ |
-| Swagger UI | ❌ | ❌ | ✅ |
+| Feature | Interactive (menu) | Automatic (monitoring) | API (optional) |
+|---------|-------------------|----------------------|----------------|
+| Docker containers | Start, stop, restart, status | Health check + auto-restart | All actions via HTTP |
+| Systemd services | Start, stop, restart, status | Health check + auto-restart | All actions via HTTP |
+| Compose stacks | Up, down, restart, pull, logs | -- | All actions via HTTP |
+| System info | On-demand overview | CPU, temp & disk alerts | On-demand via HTTP |
+| Security | Full overview on request | Brute force & ban alerts | Full overview via HTTP |
+| Server ping | On-demand check | Continuous reachability | On-demand via HTTP |
+| Container updates | Dry-run, update, rollback | -- | Via HTTP |
+| Backups | Trigger, status, disk usage | -- | Via HTTP |
+| Log viewer | Browse & download files | -- | -- |
+| Custom commands | Execute any shell command | -- | Via HTTP |
+| Wake-on-LAN | Wake device | -- | Via HTTP |
 
 ---
 
