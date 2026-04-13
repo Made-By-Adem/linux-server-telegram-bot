@@ -6,7 +6,7 @@ services:
     environment:
       CONFIG_PATH: /app/config.yaml
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.yaml:/app/config.yaml
       - ./logs/bot:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -31,7 +31,7 @@ services:
     environment:
       CONFIG_PATH: /app/config.yaml
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.yaml:/app/config.yaml
       - ./logs/monitoring:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -52,7 +52,7 @@ services:
     environment:
       CONFIG_PATH: /app/config.yaml
     volumes:
-      - ./config.yaml:/app/config.yaml:ro
+      - ./config.yaml:/app/config.yaml
       - ./logs/api:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket

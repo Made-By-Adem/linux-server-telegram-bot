@@ -104,8 +104,8 @@ logfiles:
 
 # External script paths
 scripts:
-  update_containers: /opt/scripts/update-containers.sh
-  backup: /opt/scripts/backup.sh
+  update_containers: /usr/local/bin/update-containers
+  backup: /usr/local/bin/backup
 
 # Path to shared server states file (used by both bot and monitoring)
 server_states_path: server_states.json
