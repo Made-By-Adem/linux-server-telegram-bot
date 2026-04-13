@@ -14,7 +14,6 @@ import signal
 import socket
 import sys
 import tempfile
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

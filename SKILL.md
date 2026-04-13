@@ -92,6 +92,8 @@ Error responses use `success: false` with an `error` message.
 | `/api/docker/{action}/{name}` | POST | Container action | action: `start`\|`stop`\|`restart` |
 | `/api/docker/{action}` | POST | Bulk container action | action: `start_all`\|`stop_all`\|`restart_all` |
 | `/api/docker/cleanup` | POST | Docker system prune | |
+| `/api/logs` | GET | List available log files | |
+| `/api/logs/{index}` | GET | Read log file tail | query: `?tail=50` |
 | `/api/services/status` | GET | All service statuses | |
 | `/api/services/{action}/{name}` | POST | Service action | action: `start`\|`stop`\|`restart` |
 | `/api/compose/status` | GET | All stack statuses | |
@@ -102,6 +104,8 @@ Error responses use `success: false` with an `error` message.
 | `/api/sysinfo/memory` | GET | Memory (total/used/free/cache MB) | |
 | `/api/sysinfo/disk` | GET | Disk per partition | |
 | `/api/sysinfo/temperature` | GET | CPU temperature | |
+| `/api/sysinfo/stress-test` | POST | CPU stress test (feature-flag gated) | query: `?minutes=1` |
+| `/api/sysinfo/fan` | POST | Set fan state (feature-flag gated) | query: `?state=0` (0=off/auto, 1=on) |
 | `/api/security` | GET | Full security overview | |
 | `/api/security/fail2ban` | GET | Fail2ban status | |
 | `/api/security/ufw` | GET | UFW status | |

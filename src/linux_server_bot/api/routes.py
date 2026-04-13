@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import asdict
 
 from fastapi import APIRouter, Depends
@@ -14,6 +15,7 @@ from linux_server_bot.shared.actions import (
     backups,
     compose,
     docker,
+    logs,
     security,
     servers,
     services,
@@ -48,6 +50,8 @@ class RebootRequest(BaseModel):
 
 @router.get("/docker/status")
 async def docker_status():
+    if not os.path.exists("/var/run/docker.sock"):
+        return {"success": False, "error": "Docker socket not available"}
     statuses = docker.get_container_statuses()
     return {"success": True, "data": [asdict(s) for s in statuses]}
 
@@ -139,6 +143,22 @@ async def compose_logs(name: str, tail: int = 50):
 
 
 # ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+
+
+@router.get("/logs")
+async def logs_list():
+    entries = logs.list_available_logs()
+    return {"success": True, "data": entries}
+
+
+@router.get("/logs/{index}")
+async def logs_read(index: int, tail: int = 50):
+    return logs.read_log_tail(index, tail=tail)
+
+
+# ---------------------------------------------------------------------------
 # System info
 # ---------------------------------------------------------------------------
 
@@ -166,6 +186,24 @@ async def sysinfo_disk():
 @router.get("/sysinfo/temperature")
 async def sysinfo_temperature():
     return sysinfo.get_temperature()
+
+
+@router.post("/sysinfo/stress-test")
+async def sysinfo_stress_test(minutes: int = 1):
+    if not config.features.stress_test:
+        return {"success": False, "error": "Stress test feature is disabled"}
+    if minutes < 1 or minutes > 60:
+        return {"success": False, "error": "Duration must be between 1 and 60 minutes"}
+    return sysinfo.run_stress_test(minutes)
+
+
+@router.post("/sysinfo/fan")
+async def sysinfo_fan(state: int = 0):
+    if not config.features.fan_control:
+        return {"success": False, "error": "Fan control feature is disabled"}
+    if state not in (0, 1):
+        return {"success": False, "error": "State must be 0 (off/auto) or 1 (on)"}
+    return sysinfo.set_fan_state(state)
 
 
 # ---------------------------------------------------------------------------

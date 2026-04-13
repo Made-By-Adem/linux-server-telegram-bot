@@ -86,6 +86,47 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/docker/cleanup
 
 ---
 
+## Log Files
+
+### `GET /api/logs`
+
+List all configured log files with their index.
+
+```bash
+curl -s -H "X-API-Key: $KEY" $URL/logs
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {"index": 0, "path": "/var/log/auth.log", "name": "auth.log", "size_bytes": 524288},
+    {"index": 1, "path": "/var/log/fail2ban.log", "name": "fail2ban.log", "size_bytes": 102400}
+  ]
+}
+```
+
+### `GET /api/logs/{index}?tail=50`
+
+Read the last N lines of a log file. The `index` comes from `/api/logs`.
+
+```bash
+curl -s -H "X-API-Key: $KEY" "$URL/logs/0?tail=20"
+```
+
+```json
+{
+  "success": true,
+  "path": "/var/log/auth.log",
+  "name": "auth.log",
+  "total_lines": 1500,
+  "lines_returned": 20,
+  "content": "Apr 13 10:30:01 server sshd[1234]: ..."
+}
+```
+
+---
+
 ## Systemd Services
 
 ### `GET /api/services/status`
@@ -208,6 +249,36 @@ curl -s -H "X-API-Key: $KEY" $URL/sysinfo
 
 ```json
 {"temperature_celsius": 42.0, "success": true}
+```
+
+### `POST /api/sysinfo/stress-test?minutes=1`
+
+Run a CPU stress test. Requires `features.stress_test: true` in config.yaml. Duration: 1--60 minutes.
+
+```bash
+curl -s -X POST -H "X-API-Key: $KEY" "$URL/sysinfo/stress-test?minutes=2"
+```
+
+```json
+{"minutes": 2, "success": true, "output": "stress-ng: info: ..."}
+```
+
+Feature disabled:
+
+```json
+{"success": false, "error": "Stress test feature is disabled"}
+```
+
+### `POST /api/sysinfo/fan?state=0`
+
+Set fan state. Requires `features.fan_control: true` in config.yaml (typically Raspberry Pi only). `0` = off/auto, `1` = on.
+
+```bash
+curl -s -X POST -H "X-API-Key: $KEY" "$URL/sysinfo/fan?state=1"
+```
+
+```json
+{"state": 1, "success": true, "error": ""}
 ```
 
 ---

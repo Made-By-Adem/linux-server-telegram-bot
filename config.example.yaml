@@ -35,15 +35,10 @@ api:
   port: 8120
   api_key: ${API_KEY}
 
-# Systemd services manageable via the bot
+# Systemd services (fallback list if auto-detection is unavailable)
 services:
   - docker
   - ufw
-  - nginx
-
-# Docker containers shown in bot menus (leave empty to auto-detect)
-containers:
-  - portainer
   - nginx
 
 # Docker Compose stacks

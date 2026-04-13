@@ -20,6 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["ruff>=0.1"]
+test = ["pytest>=7.0"]
 
 [project.scripts]
 linux-bot = "linux_server_bot.bot.app:main"
@@ -28,6 +29,9 @@ linux-api = "linux_server_bot.api.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 target-version = "py310"

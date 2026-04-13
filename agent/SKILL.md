@@ -68,6 +68,13 @@ All endpoints return JSON with a `success` boolean:
 | POST | `/api/services/stop/{name}` | Stop service |
 | POST | `/api/services/restart/{name}` | Restart service |
 
+### Log Files
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/logs` | List available log files with index |
+| GET | `/api/logs/{index}?tail=50` | Read last N lines of a log file |
+
 ### System Info
 
 | Method | Path | Description |
@@ -77,6 +84,8 @@ All endpoints return JSON with a `success` boolean:
 | GET | `/api/sysinfo/memory` | Memory: total, used, free, cache |
 | GET | `/api/sysinfo/disk` | Disk usage per partition |
 | GET | `/api/sysinfo/temperature` | CPU temperature |
+| POST | `/api/sysinfo/stress-test?minutes=1` | Run CPU stress test (feature-flag gated) |
+| POST | `/api/sysinfo/fan?state=0` | Set fan state: 0=off/auto, 1=on (feature-flag gated) |
 
 ### Security
 

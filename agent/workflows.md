@@ -166,7 +166,23 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/command \
 
 ---
 
-## 8. Multi-Server Overview
+## 8. Log Investigation
+
+```bash
+# 1. List available log files
+curl -s -H "X-API-Key: $KEY" $URL/logs
+
+# 2. Read the last 100 lines of a specific log (use index from step 1)
+curl -s -H "X-API-Key: $KEY" "$URL/logs/0?tail=100"
+
+# 3. Check auth.log for brute force patterns
+curl -s -H "X-API-Key: $KEY" "$URL/logs/0?tail=200"
+# Parse the content field for "Failed password" lines
+```
+
+---
+
+## 9. Multi-Server Overview
 
 When managing multiple servers, run the health check workflow against each server in parallel:
 
@@ -181,3 +197,41 @@ for i in "${!SERVERS[@]}"; do
   curl -s -H "X-API-Key: ${KEYS[$i]}" ${SERVERS[$i]}/security/failed-logins
 done
 ```
+
+---
+
+## 10. AI Agent Autonomous Loop
+
+Example of how an AI agent can autonomously monitor and remediate issues. Run periodically (e.g., every 5 minutes).
+
+```
+1. GET /api/health                → if unreachable, alert and stop
+
+2. GET /api/sysinfo/cpu           → if cpu_percent > 80:
+   POST /api/command              → {"command": "ps aux --sort=-%cpu | head -10"}
+                                    → report top processes
+
+3. GET /api/sysinfo/disk          → if any partition > 90%:
+   POST /api/docker/cleanup       → free up Docker space
+   GET /api/sysinfo/disk          → verify improvement
+
+4. GET /api/docker/status         → for each container where running == false:
+   POST /api/docker/restart/{name}→ restart it
+   GET /api/docker/status         → verify it came back up
+
+5. GET /api/services/status       → for each service where active == false:
+   POST /api/services/restart/{name} → restart it
+
+6. GET /api/security/failed-logins→ if found == true:
+   GET /api/security/fail2ban     → verify fail2ban is active
+   GET /api/logs/0?tail=50        → check auth.log for patterns
+
+7. GET /api/backups/status        → if last backup > 24h ago:
+   POST /api/backups/trigger      → start backup
+```
+
+**Key principles for AI agents:**
+- Always check status **before and after** an action to verify the result
+- Use `/api/command` as a fallback for diagnostics not covered by dedicated endpoints
+- Use `/api/logs` to investigate root causes (check auth.log, syslog, fail2ban.log)
+- Never call `/api/reboot` without explicit human approval

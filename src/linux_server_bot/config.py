@@ -176,7 +176,6 @@ class AppConfig:
     wol: WolConfig = field(default_factory=WolConfig)
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
     services: list[str] = field(default_factory=list)
-    containers: list[str] = field(default_factory=list)
     compose_stacks: list[ComposeStack] = field(default_factory=list)
     servers: list[ServerEntry] = field(default_factory=list)
     logfiles: list[str] = field(default_factory=list)
@@ -207,7 +206,6 @@ class AppConfig:
         }) if features else FeaturesConfig()
 
         self.services = data.get("services", [])
-        self.containers = data.get("containers", [])
         self.logfiles = data.get("logfiles", [])
         self.server_states_path = data.get("server_states_path", "server_states.json")
         self.log_directory = data.get("log_directory", "./logs")
