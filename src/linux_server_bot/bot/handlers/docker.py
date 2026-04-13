@@ -72,19 +72,20 @@ def _get_config_path() -> str:
 
 
 def _send_policy_overview(bot, chat_id: int, config) -> None:
-    """Show current monitoring policies for all containers."""
-    items = config.monitoring.containers
-    if not items:
-        bot.send_message(chat_id, "No monitored containers configured.")
+    """Show current monitoring policies for all auto-detected containers."""
+    all_containers = get_container_names()
+    if not all_containers:
+        bot.send_message(chat_id, "No Docker containers detected.")
         return
 
     lines = ["<b>Monitoring policies (containers):</b>", ""]
-    for item in items:
-        icon = _POLICY_ICONS.get(item.on_failure, "?")
-        lines.append(f"{icon} <b>{item.name}</b>: {item.on_failure}")
+    for name in all_containers:
+        policy = config.monitoring.get_container_policy(name)
+        icon = _POLICY_ICONS.get(policy, "?")
+        lines.append(f"{icon} <b>{name}</b>: {policy}")
 
     lines.append("\nTap a container below to change its policy:")
-    markup = inline_item_keyboard("docker", "policy_pick", [i.name for i in items], row_width=2)
+    markup = inline_item_keyboard("docker", "policy_pick", all_containers, row_width=2)
     bot.send_message(chat_id, "\n".join(lines), reply_markup=markup, parse_mode="HTML")
 
 

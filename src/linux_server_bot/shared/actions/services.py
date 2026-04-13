@@ -17,6 +17,31 @@ class ServiceStatus:
     active: bool
 
 
+def get_enabled_service_names() -> list[str]:
+    """Auto-detect all enabled systemd services.
+
+    Returns service names (without .service suffix) for all services that
+    are set to start on boot.  These are the services a user would expect
+    to be running at all times.
+    """
+    result = run_command([
+        "systemctl", "list-unit-files",
+        "--type=service", "--state=enabled", "--no-legend", "--no-pager",
+    ])
+    names: list[str] = []
+    if result.success:
+        for line in result.stdout.strip().splitlines():
+            parts = line.split()
+            if parts:
+                name = parts[0]
+                # Strip .service suffix
+                if name.endswith(".service"):
+                    name = name[: -len(".service")]
+                names.append(name)
+    names.sort()
+    return names
+
+
 def get_service_status(name: str) -> ServiceStatus:
     """Get the status of a single service."""
     result = run_command(["systemctl", "is-active", name])

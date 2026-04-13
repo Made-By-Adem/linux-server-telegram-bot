@@ -14,6 +14,7 @@ from linux_server_bot.bot.menus import (
 )
 from linux_server_bot.config import MonitoredItem, update_monitoring_policy
 from linux_server_bot.shared.actions.services import (
+    get_enabled_service_names,
     get_service_statuses,
     service_action,
     service_action_all,
@@ -56,7 +57,20 @@ def _send_services_menu(bot, chat_id: int) -> None:
     bot.send_message(chat_id, "What do you want to do?", reply_markup=markup)
 
 
+def _get_all_services(config) -> list[str]:
+    """Return auto-detected enabled services merged with config.services."""
+    detected = get_enabled_service_names()
+    configured = set(config.services)
+    # Merge: detected + any configured ones not already in detected
+    all_names = list(dict.fromkeys(detected + list(configured)))
+    all_names.sort()
+    return all_names
+
+
 def _send_status(bot, chat_id: int, services: list[str]) -> None:
+    if not services:
+        bot.send_message(chat_id, "No enabled services detected.")
+        return
     statuses = get_service_statuses(services)
     lines = ["<b>Status services:</b>"]
     for s in statuses:
@@ -72,19 +86,20 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         return os.environ.get("CONFIG_PATH", "config.yaml")
 
     def _send_policy_overview(bot_inst, chat_id: int) -> None:
-        """Show current monitoring policies for all services."""
-        items = config.monitoring.services
-        if not items:
-            bot_inst.send_message(chat_id, "No monitored services configured.")
+        """Show current monitoring policies for all auto-detected services."""
+        all_services = _get_all_services(config)
+        if not all_services:
+            bot_inst.send_message(chat_id, "No enabled services detected.")
             return
 
         lines = ["<b>Monitoring policies (services):</b>", ""]
-        for item in items:
-            icon = _POLICY_ICONS.get(item.on_failure, "?")
-            lines.append(f"{icon} <b>{item.name}</b>: {item.on_failure}")
+        for name in all_services:
+            policy = config.monitoring.get_service_policy(name)
+            icon = _POLICY_ICONS.get(policy, "?")
+            lines.append(f"{icon} <b>{name}</b>: {policy}")
 
         lines.append("\nTap a service below to change its policy:")
-        markup = inline_item_keyboard("services", "policy_pick", [i.name for i in items], row_width=2)
+        markup = inline_item_keyboard("services", "policy_pick", all_services, row_width=2)
         bot_inst.send_message(chat_id, "\n".join(lines), reply_markup=markup, parse_mode="HTML")
 
     def _send_policy_choice(bot_inst, chat_id: int, service_name: str) -> None:
@@ -119,7 +134,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             bot_inst.answer_callback_query(call.id, "Fetching status...")
-            _send_status(bot_inst, chat_id, config.services)
+            _send_status(bot_inst, chat_id, _get_all_services(config))
             return
 
         # -- Policy management --
@@ -154,10 +169,11 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         # -- Service management --
         if action in ("start", "stop", "restart") and not target:
             bot_inst.answer_callback_query(call.id)
-            if not config.services:
-                bot_inst.send_message(chat_id, "No services configured.")
+            all_services = _get_all_services(config)
+            if not all_services:
+                bot_inst.send_message(chat_id, "No services detected.")
                 return
-            markup = inline_item_keyboard("services", action, config.services, row_width=2)
+            markup = inline_item_keyboard("services", action, all_services, row_width=2)
             bot_inst.send_message(chat_id, f"Which service to {action}?", reply_markup=markup)
             return
 
@@ -167,18 +183,19 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
             bot_inst.send_message(chat_id, msg)
-            _send_status(bot_inst, chat_id, config.services)
+            _send_status(bot_inst, chat_id, _get_all_services(config))
             return
 
         if action in ("start_all", "stop_all", "restart_all"):
             real_action = action.replace("_all", "")
+            all_services = _get_all_services(config)
             bot_inst.answer_callback_query(call.id, f"{real_action.capitalize()}ing all services...")
-            results = service_action_all(real_action, config.services)
+            results = service_action_all(real_action, all_services)
             failures = [r for r in results if not r["success"]]
             if failures:
                 lines = [f"\u26a0\ufe0f {r['name']}: {r['error']}" for r in failures]
                 bot_inst.send_message(chat_id, "\n".join(lines))
-            _send_status(bot_inst, chat_id, config.services)
+            _send_status(bot_inst, chat_id, all_services)
             return
 
         bot_inst.answer_callback_query(call.id, "Unknown action")
@@ -188,11 +205,11 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_SERVICES)
     @authorized(config)
     def handle_services_menu(message):
-        _send_status(bot, message.chat.id, config.services)
+        _send_status(bot, message.chat.id, _get_all_services(config))
         _send_services_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["services"])
     @authorized(config)
     def handle_services_command(message):
-        _send_status(bot, message.chat.id, config.services)
+        _send_status(bot, message.chat.id, _get_all_services(config))
         _send_services_menu(bot, message.chat.id)

@@ -103,12 +103,14 @@ log_directory: ./logs
 monitoring:
   interval_minutes: 5
 
-  # Monitored containers with failure policy.
+  # Container failure policies (auto-detected from Docker).
+  # All containers are monitored automatically. Use this list only to
+  # override the default policy for specific containers.
   # on_failure options:
   #   notify          - send alert only, do not restart (default)
   #   notify_restart  - send alert AND auto-restart
   #   ignore          - do nothing
-  # You can also use a plain string (e.g. "portainer") which defaults to notify.
+  # Policies can also be changed at runtime via the Telegram bot menu.
   containers:
     - name: portainer
       on_failure: notify
@@ -118,8 +120,9 @@ monitoring:
       host: "1.2.3.4"
       port: 443
 
-  # Monitored services with failure policy (same options as containers).
-  # Policies can be changed at runtime via the Telegram bot menu.
+  # Service failure policies (auto-detected from systemd enabled services).
+  # All enabled services are monitored automatically. Use this list only
+  # to override the default policy for specific services.
   services:
     - name: nginx
       on_failure: notify

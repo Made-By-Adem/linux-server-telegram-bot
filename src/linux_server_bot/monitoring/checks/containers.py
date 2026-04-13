@@ -28,12 +28,21 @@ def _restart_container(container_name: str) -> bool:
 
 
 def check_containers(bot: telebot.TeleBot, config: AppConfig) -> None:
-    """Check all monitored containers, respecting per-container on_failure policy."""
+    """Auto-detect all Docker containers and check each one.
+
+    Policies are looked up from ``config.monitoring.containers``; containers
+    not listed there get the default policy (``notify``).
+    """
+    from linux_server_bot.shared.actions.docker import get_container_names
     from linux_server_bot.shared.telegram import send_to_all
 
-    for item in config.monitoring.containers:
-        container = item.name
-        policy = item.on_failure
+    containers = get_container_names()
+    if not containers:
+        logger.info("No Docker containers detected")
+        return
+
+    for container in containers:
+        policy = config.monitoring.get_container_policy(container)
         logger.info("Checking container %s (policy: %s)", container, policy)
 
         if _is_container_running(container):
@@ -52,7 +61,7 @@ def check_containers(bot: telebot.TeleBot, config: AppConfig) -> None:
             )
             continue
 
-        # policy == "notify_restart" (default)
+        # policy == "notify_restart"
         logger.warning("Container %s is down, attempting restart", container)
         if _restart_container(container):
             logger.info("Container %s restarted successfully", container)

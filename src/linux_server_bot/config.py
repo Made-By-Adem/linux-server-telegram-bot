@@ -114,6 +114,20 @@ class MonitoringConfig:
         "check_ssh_sessions": True,
     })
 
+    def get_service_policy(self, name: str) -> str:
+        """Look up the on_failure policy for a service, default ``'notify'``."""
+        for item in self.services:
+            if item.name == name:
+                return item.on_failure
+        return "notify"
+
+    def get_container_policy(self, name: str) -> str:
+        """Look up the on_failure policy for a container, default ``'notify'``."""
+        for item in self.containers:
+            if item.name == name:
+                return item.on_failure
+        return "notify"
+
 
 @dataclass
 class WolConfig:

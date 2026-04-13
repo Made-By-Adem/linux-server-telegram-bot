@@ -26,12 +26,21 @@ def _restart_service(service_name: str) -> bool:
 
 
 def check_services(bot: telebot.TeleBot, config: AppConfig) -> None:
-    """Check all monitored services, respecting per-service on_failure policy."""
+    """Auto-detect enabled services and check each one.
+
+    Policies are looked up from ``config.monitoring.services``; services
+    not listed there get the default policy (``notify``).
+    """
+    from linux_server_bot.shared.actions.services import get_enabled_service_names
     from linux_server_bot.shared.telegram import send_to_all
 
-    for item in config.monitoring.services:
-        service = item.name
-        policy = item.on_failure
+    services = get_enabled_service_names()
+    if not services:
+        logger.info("No enabled services detected")
+        return
+
+    for service in services:
+        policy = config.monitoring.get_service_policy(service)
         logger.info("Checking service %s (policy: %s)", service, policy)
 
         if _is_service_running(service):
@@ -50,7 +59,7 @@ def check_services(bot: telebot.TeleBot, config: AppConfig) -> None:
             )
             continue
 
-        # policy == "notify_restart" (default)
+        # policy == "notify_restart"
         logger.warning("Service %s is down, attempting restart", service)
         if _restart_service(service):
             logger.info("Service %s restarted successfully", service)
