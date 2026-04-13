@@ -550,7 +550,7 @@ For more specific issues, check the logs in the `logs/` directory.
 
 ## 📄 License
 
-This project is licensed under the Custom License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
