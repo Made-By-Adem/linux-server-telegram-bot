@@ -23,12 +23,21 @@ def _load_states(path: str) -> dict[str, str]:
     try:
         with open(path, "r") as f:
             return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError, IsADirectoryError, PermissionError):
         return {}
 
 
 def _save_states(path: str, states: dict[str, str]) -> None:
     """Atomic write to prevent corruption."""
+    # If a directory exists at the path (Docker creates dirs for missing bind mounts),
+    # remove it so we can write a file instead.
+    if os.path.isdir(path):
+        try:
+            os.rmdir(path)
+        except OSError:
+            logger.warning("Cannot save server states: %s is a directory", path)
+            return
+
     dir_name = os.path.dirname(path) or "."
     os.makedirs(dir_name, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
