@@ -11,7 +11,7 @@ AI Agent ─────── REST API ───┘
                                ▲ single config.yaml (hot-reloadable)
 ```
 
-Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server.
+Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5, but should work on any Linux server.
 
 > [!TIP]
 > **Setting up a new server?** Use [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) first to harden your server (SSH, firewall, Fail2ban, Docker, and 17 security layers), then deploy this bot for ongoing management. The bot integrates directly with the update and backup scripts from that repo.
@@ -180,7 +180,7 @@ The bot comes with sensible defaults in `config.example.yaml` -- you can customi
 
 ### System Requirements
 
-- **OS:** Ubuntu 20.04+ or Debian 11+ (including Raspberry Pi OS)
+- **OS:** Ubuntu 24.04+, Debian 12+, or Raspberry Pi OS
 - **Python:** 3.10+ (or Docker)
 - **Shell:** Bash 4.0+
 
@@ -576,7 +576,7 @@ Built with focus on:
 
 - **Safety:** Authorization checks, confirmation dialogs, and restricted access
 - **Usability:** Interactive menus with inline buttons for quick actions
-- **Reliability:** Tested on Ubuntu 22.04+, Raspberry Pi 5
+- **Reliability:** Tested on Ubuntu 24.04, Debian 12, Raspberry Pi 5
 - **Maintainability:** Modular architecture with shared actions layer
 
 ---
