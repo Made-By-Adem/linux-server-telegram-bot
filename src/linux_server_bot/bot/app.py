@@ -40,6 +40,8 @@ _HANDLER_MODULES = [
     handlers.updates,
     handlers.backups,
     handlers.reboot,
+    handlers.scripts,
+    handlers.settings,
 ]
 
 
@@ -50,6 +52,19 @@ def _write_health_check():
             f.write(str(time.time()))
     except OSError:
         pass
+
+
+def _start_health_thread():
+    """Background thread that updates the health file every 60 seconds."""
+    import threading
+
+    def _loop():
+        while True:
+            _write_health_check()
+            time.sleep(60)
+
+    t = threading.Thread(target=_loop, daemon=True)
+    t.start()
 
 
 def main() -> None:
@@ -130,7 +145,7 @@ def main() -> None:
         bot.reply_to(message, "I'm sorry, I don't understand that command.")
 
     logger.info("Bot running...")
-    _write_health_check()
+    _start_health_thread()
     bot.infinity_polling(timeout=30, long_polling_timeout=30)
 
 

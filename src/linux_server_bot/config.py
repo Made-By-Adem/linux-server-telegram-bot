@@ -142,6 +142,8 @@ class FeaturesConfig:
     stress_test: bool = True
     fan_control: bool = True
     reboot: bool = True
+    custom_scripts: bool = True
+    settings: bool = True
 
 
 @dataclass
@@ -152,9 +154,18 @@ class ApiConfig:
 
 
 @dataclass
+class CustomScript:
+    """A user-defined script that can be run from the bot menu."""
+
+    name: str
+    path: str
+
+
+@dataclass
 class ScriptsConfig:
     update_containers: str = ""
     backup: str = ""
+    custom: list[CustomScript] = field(default_factory=list)
 
 
 @dataclass
@@ -257,9 +268,15 @@ class AppConfig:
 
         # Scripts
         scripts = data.get("scripts", {})
+        custom_scripts = [
+            CustomScript(name=s["name"], path=s["path"])
+            for s in scripts.get("custom", [])
+            if isinstance(s, dict) and "name" in s and "path" in s
+        ]
         self.scripts = ScriptsConfig(
             update_containers=str(scripts.get("update_containers", "")),
             backup=str(scripts.get("backup", "")),
+            custom=custom_scripts,
         )
 
         # API
@@ -444,6 +461,36 @@ def update_monitoring_policy(
             item.on_failure = on_failure
             return
     item_list.append(MonitoredItem(name=name, on_failure=on_failure))
+
+
+def update_feature(
+    feature: str,
+    enabled: bool,
+    config_path: str | Path | None = None,
+) -> None:
+    """Toggle a feature on or off in config.yaml and in-memory config."""
+    if feature not in FeaturesConfig.__dataclass_fields__:
+        raise ValueError(f"Invalid feature: {feature!r}")
+
+    path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
+    if not path.exists():
+        logger.warning("Config file %s not found, cannot update feature", path)
+        return
+
+    raw_text = path.read_text(encoding="utf-8")
+    raw = yaml.safe_load(raw_text) or {}
+    features = raw.setdefault("features", {})
+    features[feature] = enabled
+    raw["features"] = features
+
+    path.write_text(
+        yaml.dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    logger.info("Updated feature %s to %s", feature, enabled)
+
+    # Immediate in-memory update
+    setattr(config.features, feature, enabled)
 
 
 # Valid threshold keys and their allowed ranges

@@ -30,6 +30,8 @@ BTN_SECURITY = "\U0001f512 Security"
 BTN_UPDATES = "\U0001f504 Updates"
 BTN_BACKUPS = "\U0001f4be Backups"
 BTN_REBOOT = "\U0001f501 Reboot"
+BTN_SCRIPTS = "\U0001f4dc Scripts"
+BTN_SETTINGS = "\u2699\ufe0f Settings"
 
 # Feature flag -> button label mapping
 _FEATURE_BUTTONS: list[tuple[str, str]] = [
@@ -47,6 +49,8 @@ _FEATURE_BUTTONS: list[tuple[str, str]] = [
     ("container_updates", BTN_UPDATES),
     ("backups", BTN_BACKUPS),
     ("reboot", BTN_REBOOT),
+    ("custom_scripts", BTN_SCRIPTS),
+    ("settings", BTN_SETTINGS),
 ]
 
 
