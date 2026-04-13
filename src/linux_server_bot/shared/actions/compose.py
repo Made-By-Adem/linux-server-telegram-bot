@@ -13,11 +13,26 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _looks_like_missing_compose_v2(result) -> bool:
+    """Detect cases where ``docker compose`` is unavailable/incompatible."""
+    error_text = (result.stderr or "").lower()
+    return (
+        "unknown shorthand flag: 'f' in -f" in error_text
+        or "'compose' is not a docker command" in error_text
+    )
+
+
 def _compose_cmd(path: str, args: list[str], timeout: int = 120):
-    return run_command(
+    result = run_command(
         ["docker", "compose", "-f", f"{path}/docker-compose.yml"] + args,
         timeout=timeout,
     )
+    if not result.success and _looks_like_missing_compose_v2(result):
+        result.stderr = (
+            "Docker Compose v2 is not available on this host. "
+            "Install/enable the Docker Compose plugin so 'docker compose' works."
+        )
+    return result
 
 
 def get_stack_status(stack: ComposeStack) -> dict:

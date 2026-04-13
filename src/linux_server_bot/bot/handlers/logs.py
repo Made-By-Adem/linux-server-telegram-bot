@@ -59,8 +59,23 @@ def _view_log(bot, chat_id: int, log_path: str) -> None:
 
     for log_file in log_files:
         try:
+            if os.path.getsize(log_file) == 0:
+                bot.send_message(chat_id, f"{os.path.basename(log_file)} is empty.")
+                continue
+        except OSError:
+            logger.exception("Failed to stat log file: %s", log_file)
+            bot.send_message(chat_id, f"Failed to read {log_file}")
+            continue
+
+        try:
             with open(log_file, "rb") as f:
                 bot.send_document(chat_id, f)
+        except Exception:
+            logger.exception("Failed to send log file: %s", log_file)
+            bot.send_message(chat_id, f"Failed to send {log_file}")
+            continue
+
+        try:
             with open(log_file, "r") as f:
                 lines = f.readlines()
                 tail = "".join(lines[-20:])
@@ -68,7 +83,7 @@ def _view_log(bot, chat_id: int, log_path: str) -> None:
                     bot.send_message(chat_id, f"Last 20 lines of {os.path.basename(log_file)}:")
                     bot.send_message(chat_id, tail, parse_mode=None)
         except Exception:
-            logger.exception("Failed to read log file: %s", log_file)
+            logger.exception("Failed to read log tail: %s", log_file)
             bot.send_message(chat_id, f"Failed to read {log_file}")
 
 
