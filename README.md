@@ -116,9 +116,11 @@ Before you begin, you need two things from Telegram:
 1. **Bot token** -- Talk to [@BotFather](https://t.me/BotFather) on Telegram, send `/newbot`, follow the prompts, and copy the token it gives you
 2. **Your chat ID** -- Talk to [@RawDataBot](https://t.me/raw_data_bot) on Telegram, send `/start`, and copy the `chat_id` number from the response
 
-### 2. Deploy
+### 2. Choose your deployment method
 
-#### Docker (Recommended)
+#### 2a. Docker (Recommended)
+
+Docker runs everything in containers -- no Python setup needed on your server.
 
 ```bash
 git clone https://github.com/MadeByAdem/linux-server-telegram-bot
@@ -129,7 +131,7 @@ cp .env.example .env
 cp config.example.yaml config.yaml
 ```
 
-Now edit `.env` with your credentials:
+Edit `.env` with the credentials from step 1:
 
 ```env
 SECRET_TOKEN=paste_your_bot_token_here
@@ -137,34 +139,47 @@ CHAT_ID_PERSON1=paste_your_chat_id_here
 ```
 
 > [!NOTE]
-> That's all you need to get started. The API key is **generated automatically** on first startup. WoL settings are optional -- configure them later if needed.
+> That's all you need. The API key is **generated automatically** on first startup. WoL settings are optional -- configure them later in `.env` if needed.
 
-Then deploy (this starts the bot, monitoring, and API together):
+Start all services (bot, monitoring, and API):
 
 ```bash
 docker compose up -d
 ```
 
-> [!TIP]
-> If running natively (not Docker), you can skip editing `.env` entirely -- the **setup wizard** will walk you through it on first start.
+Check the logs to verify everything started:
 
-#### Native Python (Alternative)
+```bash
+docker compose logs -f
+```
+
+> [!IMPORTANT]
+> In Docker there is no interactive setup wizard. You **must** fill in `SECRET_TOKEN` and `CHAT_ID_PERSON1` in `.env` before starting. The API key is auto-generated silently.
+
+#### 2b. Native Python (on the system directly)
+
+Run the bot directly on your server without Docker. Requires Python 3.10+.
 
 ```bash
 git clone https://github.com/MadeByAdem/linux-server-telegram-bot
 cd linux-server-telegram-bot
 pip install -e .
 
-cp .env.example .env
 cp config.example.yaml config.yaml
+```
 
+Start the bot:
+
+```bash
 linux-bot        # Start the interactive bot
 linux-monitor    # Start background monitoring (in another terminal)
 linux-api        # Start the HTTP API (optional, in another terminal)
 ```
 
+On first run, the bot launches an interactive **setup wizard** that walks you through configuring your bot token, chat ID, and optional settings. An API key is generated automatically. You don't need to create `.env` yourself -- the wizard does it for you.
+
 > [!TIP]
-> On first run, the bot launches an interactive **setup wizard** that walks you through configuring your bot token, chat ID, and optional settings. An API key is generated automatically. If the setup is interrupted (Ctrl+C, SSH disconnect, power loss), it **resumes where you left off** next time -- no need to re-enter previous steps.
+> If the setup is interrupted (Ctrl+C, SSH disconnect, power loss), it **resumes where you left off** next time -- no need to re-enter previous steps.
 
 ### 3. Start chatting
 
