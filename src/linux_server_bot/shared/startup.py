@@ -275,9 +275,7 @@ def ensure_env(env_path: str) -> None:
 
     # Check if setup was started but not finished
     state = load_setup_state()
-    setup_incomplete = state and not all(
-        state.get(s) for s in ("bot_token", "chat_id", "api_key", "wol")
-    )
+    setup_incomplete = state and not all(state.get(s) for s in ("bot_token", "chat_id", "api_key", "wol"))
 
     if (needs_setup or setup_incomplete) and _is_interactive():
         run_setup_wizard(env_path)
@@ -309,12 +307,12 @@ def check_bot_token(token: str) -> bool:
     """
     if not token or token in _PLACEHOLDER_VALUES:
         logger.error(
-            "Bot token is not configured. Set SECRET_TOKEN in .env "
-            "(get one from @BotFather: https://t.me/BotFather)"
+            "Bot token is not configured. Set SECRET_TOKEN in .env (get one from @BotFather: https://t.me/BotFather)"
         )
         return False
 
     import telebot
+
     try:
         bot = telebot.TeleBot(token)
         me = bot.get_me()
@@ -335,14 +333,10 @@ def check_docker_socket() -> bool:
     if os.path.exists(sock_path):
         if os.access(sock_path, os.R_OK | os.W_OK):
             return True
-        logger.warning(
-            "Docker socket exists but is not readable/writable. "
-            "Docker features may not work."
-        )
+        logger.warning("Docker socket exists but is not readable/writable. Docker features may not work.")
         return False
     logger.info(
-        "Docker socket not found at %s. "
-        "Docker features will not work (this is normal if Docker is not installed).",
+        "Docker socket not found at %s. Docker features will not work (this is normal if Docker is not installed).",
         sock_path,
     )
     return False
@@ -353,8 +347,7 @@ def check_config_file(config_path: str) -> bool:
     if os.path.exists(config_path):
         return True
     logger.warning(
-        "Config file %s not found. Using defaults. "
-        "Copy config.example.yaml to config.yaml to customize.",
+        "Config file %s not found. Using defaults. Copy config.example.yaml to config.yaml to customize.",
         config_path,
     )
     return False
@@ -406,9 +399,7 @@ def find_free_port(preferred: int, max_attempts: int = 20) -> int | None:
     print(f"\nPorts {preferred}-{preferred + max_attempts - 1} are all in use.")
     if _is_interactive():
         try:
-            answer = input(
-                "Enter a port number to use, or press Enter to skip the API: "
-            ).strip()
+            answer = input("Enter a port number to use, or press Enter to skip the API: ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return None

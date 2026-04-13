@@ -29,7 +29,6 @@ def get_backup_status() -> dict:
 def get_backup_size() -> dict:
     """Get backup disk usage."""
     result = run_shell(
-        "du -sh /backup/ 2>/dev/null || du -sh /mnt/backup/ 2>/dev/null"
-        " || echo 'Backup directory not found.'"
+        "du -sh /backup/ 2>/dev/null || du -sh /mnt/backup/ 2>/dev/null || echo 'Backup directory not found.'"
     )
     return {"output": result.stdout.strip()}

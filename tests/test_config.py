@@ -22,10 +22,12 @@ class TestParseMonitoredItems:
         assert items[1].name == "docker"
 
     def test_dict_with_policy(self):
-        items = _parse_monitored_items([
-            {"name": "nginx", "on_failure": "ignore"},
-            {"name": "docker", "on_failure": "notify_restart"},
-        ])
+        items = _parse_monitored_items(
+            [
+                {"name": "nginx", "on_failure": "ignore"},
+                {"name": "docker", "on_failure": "notify_restart"},
+            ]
+        )
         assert items[0].on_failure == "ignore"
         assert items[1].on_failure == "notify_restart"
 
@@ -38,10 +40,12 @@ class TestParseMonitoredItems:
         assert items[0].on_failure == "notify"
 
     def test_mixed_strings_and_dicts(self):
-        items = _parse_monitored_items([
-            "nginx",
-            {"name": "docker", "on_failure": "ignore"},
-        ])
+        items = _parse_monitored_items(
+            [
+                "nginx",
+                {"name": "docker", "on_failure": "ignore"},
+            ]
+        )
         assert len(items) == 2
         assert items[0].name == "nginx"
         assert items[0].on_failure == "notify"
@@ -58,10 +62,12 @@ class TestParseMonitoredItems:
 
 class TestMonitoringConfigPolicyLookup:
     def test_get_service_policy_found(self):
-        mc = MonitoringConfig(services=[
-            MonitoredItem(name="nginx", on_failure="ignore"),
-            MonitoredItem(name="docker", on_failure="notify_restart"),
-        ])
+        mc = MonitoringConfig(
+            services=[
+                MonitoredItem(name="nginx", on_failure="ignore"),
+                MonitoredItem(name="docker", on_failure="notify_restart"),
+            ]
+        )
         assert mc.get_service_policy("nginx") == "ignore"
         assert mc.get_service_policy("docker") == "notify_restart"
 
@@ -70,9 +76,11 @@ class TestMonitoringConfigPolicyLookup:
         assert mc.get_service_policy("unknown") == "notify"
 
     def test_get_container_policy_found(self):
-        mc = MonitoringConfig(containers=[
-            MonitoredItem(name="portainer", on_failure="notify_restart"),
-        ])
+        mc = MonitoringConfig(
+            containers=[
+                MonitoredItem(name="portainer", on_failure="notify_restart"),
+            ]
+        )
         assert mc.get_container_policy("portainer") == "notify_restart"
 
     def test_get_container_policy_default(self):

@@ -37,7 +37,8 @@ def check_failed_logins(bot: telebot.TeleBot, config: AppConfig) -> None:
     if count > 10:
         logger.warning("Detected %d failed login attempts in last %d minutes", count, interval)
         send_to_all(
-            bot, config,
+            bot,
+            config,
             f"\u26a0\ufe0f Brute force alert: {count} failed login attempts in the last {interval} minutes!",
         )
 
@@ -51,13 +52,13 @@ def check_banned_ips(bot: telebot.TeleBot, config: AppConfig) -> None:
 
     interval = config.monitoring.interval_minutes
     result = run_shell(
-        f"journalctl -u fail2ban --since '{interval} minutes ago' --no-pager 2>/dev/null"
-        " | grep -i 'ban'"
+        f"journalctl -u fail2ban --since '{interval} minutes ago' --no-pager 2>/dev/null | grep -i 'ban'"
     )
     bans = result.stdout.strip()
     if bans:
         logger.warning("New fail2ban bans detected")
         send_to_all(
-            bot, config,
+            bot,
+            config,
             f"\U0001f6ab New fail2ban bans:\n{escape_html(bans)}",
         )

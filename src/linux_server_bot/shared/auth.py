@@ -22,6 +22,7 @@ def authorized(config: AppConfig):
         def my_handler(message):
             ...
     """
+
     def decorator(func):
         @functools.wraps(func)
         def wrapper(message, *args, **kwargs):
@@ -33,5 +34,7 @@ def authorized(config: AppConfig):
                 )
                 return
             return func(message, *args, **kwargs)
+
         return wrapper
+
     return decorator

@@ -24,12 +24,14 @@ _DEBOUNCE_SECONDS = 0.5
 def _interpolate_env(value: Any) -> Any:
     """Recursively replace ${VAR} patterns with environment variable values."""
     if isinstance(value, str):
+
         def _replacer(match: re.Match) -> str:
             var = match.group(1)
             env_val = os.environ.get(var, "")
             if not env_val:
                 logger.warning("Environment variable %s is not set", var)
             return env_val
+
         return _ENV_VAR_PATTERN.sub(_replacer, value)
     if isinstance(value, dict):
         return {k: _interpolate_env(v) for k, v in value.items()}
@@ -103,16 +105,20 @@ class MonitoringConfig:
     containers: list[MonitoredItem] = field(default_factory=list)
     servers: list[ServerEntry] = field(default_factory=list)
     services: list[MonitoredItem] = field(default_factory=list)
-    thresholds: dict[str, int | float] = field(default_factory=lambda: {
-        "cpu_percent": 80,
-        "storage_percent": 90,
-        "temperature_celsius": 50,
-    })
-    security: dict[str, bool] = field(default_factory=lambda: {
-        "check_fail2ban": True,
-        "check_ufw": True,
-        "check_ssh_sessions": True,
-    })
+    thresholds: dict[str, int | float] = field(
+        default_factory=lambda: {
+            "cpu_percent": 80,
+            "storage_percent": 90,
+            "temperature_celsius": 50,
+        }
+    )
+    security: dict[str, bool] = field(
+        default_factory=lambda: {
+            "check_fail2ban": True,
+            "check_ufw": True,
+            "check_ssh_sessions": True,
+        }
+    )
 
     def get_service_policy(self, name: str) -> str:
         """Look up the on_failure policy for a service, default ``'notify'``."""
@@ -200,10 +206,11 @@ class AppConfig:
         )
 
         features = data.get("features", {})
-        self.features = FeaturesConfig(**{
-            k: v for k, v in features.items()
-            if k in FeaturesConfig.__dataclass_fields__
-        }) if features else FeaturesConfig()
+        self.features = (
+            FeaturesConfig(**{k: v for k, v in features.items() if k in FeaturesConfig.__dataclass_fields__})
+            if features
+            else FeaturesConfig()
+        )
 
         self.services = data.get("services", [])
         self.logfiles = data.get("logfiles", [])

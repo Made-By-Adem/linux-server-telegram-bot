@@ -109,12 +109,18 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         markup = types.InlineKeyboardMarkup(row_width=1)
         for action_value in MonitoredItem.ACTIONS:
             label = _POLICY_LABELS[action_value]
-            markup.add(types.InlineKeyboardButton(
-                label, callback_data=f"services:policy_set:{service_name}:{action_value}",
-            ))
-        markup.add(types.InlineKeyboardButton(
-            "\u274c Cancel", callback_data="services:cancel",
-        ))
+            markup.add(
+                types.InlineKeyboardButton(
+                    label,
+                    callback_data=f"services:policy_set:{service_name}:{action_value}",
+                )
+            )
+        markup.add(
+            types.InlineKeyboardButton(
+                "\u274c Cancel",
+                callback_data="services:cancel",
+            )
+        )
         bot_inst.send_message(
             chat_id,
             f"Choose monitoring policy for <b>{service_name}</b>:",

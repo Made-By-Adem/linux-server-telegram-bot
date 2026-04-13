@@ -54,7 +54,8 @@ def check_services(bot: telebot.TeleBot, config: AppConfig) -> None:
         if policy == "notify":
             logger.warning("Service %s is down (notify only)", service)
             send_to_all(
-                bot, config,
+                bot,
+                config,
                 f"\u26a0\ufe0f \U0001f4e6 Service <b>{service}</b> is down.",
             )
             continue
@@ -64,12 +65,14 @@ def check_services(bot: telebot.TeleBot, config: AppConfig) -> None:
         if _restart_service(service):
             logger.info("Service %s restarted successfully", service)
             send_to_all(
-                bot, config,
+                bot,
+                config,
                 f"\U0001f9be \U0001f4e6 Service <b>{service}</b> was down, but I have restarted it.",
             )
         else:
             logger.error("Service %s could not be restarted", service)
             send_to_all(
-                bot, config,
+                bot,
+                config,
                 f"\U0001f613 \U0001f4e6 Service <b>{service}</b> is down and I could not restart it!",
             )

@@ -28,10 +28,15 @@ def get_container_names() -> list[str]:
 
 def get_container_statuses() -> list[ContainerStatus]:
     """Get status of all containers with structured data."""
-    result = run_command([
-        "docker", "ps", "-a",
-        "--format", "{{.Names}}\t{{.Status}}\t{{.State}}",
-    ])
+    result = run_command(
+        [
+            "docker",
+            "ps",
+            "-a",
+            "--format",
+            "{{.Names}}\t{{.Status}}\t{{.State}}",
+        ]
+    )
     containers: list[ContainerStatus] = []
     if result.success:
         for line in result.stdout.strip().split("\n"):
@@ -39,18 +44,27 @@ def get_container_statuses() -> list[ContainerStatus]:
                 continue
             parts = line.split("\t")
             if len(parts) >= 3:
-                containers.append(ContainerStatus(
-                    name=parts[0], status=parts[1], running=parts[2] == "running",
-                ))
+                containers.append(
+                    ContainerStatus(
+                        name=parts[0],
+                        status=parts[1],
+                        running=parts[2] == "running",
+                    )
+                )
     return containers
 
 
 def get_container_statuses_text() -> str:
     """Get formatted container status text for display."""
-    result = run_command([
-        "docker", "ps", "-a",
-        "--format", "Name: {{.Names}}\nCreated at: {{.CreatedAt}}\nStatus: {{.Status}}\n",
-    ])
+    result = run_command(
+        [
+            "docker",
+            "ps",
+            "-a",
+            "--format",
+            "Name: {{.Names}}\nCreated at: {{.CreatedAt}}\nStatus: {{.Status}}\n",
+        ]
+    )
     return result.stdout if result.success else f"Error: {result.stderr}"
 
 

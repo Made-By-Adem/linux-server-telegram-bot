@@ -62,8 +62,11 @@ def get_memory_usage() -> dict:
     try:
         parts = result.stdout.strip().split()
         return {
-            "total_mb": int(parts[0]), "used_mb": int(parts[1]),
-            "free_mb": int(parts[2]), "cache_mb": int(parts[3]), "success": True,
+            "total_mb": int(parts[0]),
+            "used_mb": int(parts[1]),
+            "free_mb": int(parts[2]),
+            "cache_mb": int(parts[3]),
+            "success": True,
         }
     except (ValueError, IndexError):
         return {"success": False, "error": "Could not parse memory info"}
@@ -77,10 +80,15 @@ def get_disk_usage() -> dict:
         if line:
             parts = line.split()
             if len(parts) >= 5:
-                partitions.append({
-                    "device": parts[0], "total": parts[1], "used": parts[2],
-                    "free": parts[3], "percent": parts[4],
-                })
+                partitions.append(
+                    {
+                        "device": parts[0],
+                        "total": parts[1],
+                        "used": parts[2],
+                        "free": parts[3],
+                        "percent": parts[4],
+                    }
+                )
     return {"partitions": partitions, "success": True}
 
 

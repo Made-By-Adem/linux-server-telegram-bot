@@ -24,10 +24,16 @@ def get_enabled_service_names() -> list[str]:
     are set to start on boot.  These are the services a user would expect
     to be running at all times.
     """
-    result = run_command([
-        "systemctl", "list-unit-files",
-        "--type=service", "--state=enabled", "--no-legend", "--no-pager",
-    ])
+    result = run_command(
+        [
+            "systemctl",
+            "list-unit-files",
+            "--type=service",
+            "--state=enabled",
+            "--no-legend",
+            "--no-pager",
+        ]
+    )
     names: list[str] = []
     if result.success:
         for line in result.stdout.strip().splitlines():

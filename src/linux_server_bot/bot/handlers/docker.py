@@ -96,12 +96,18 @@ def _send_policy_choice(bot, chat_id: int, container_name: str) -> None:
     markup = types.InlineKeyboardMarkup(row_width=1)
     for action_value in MonitoredItem.ACTIONS:
         label = _POLICY_LABELS[action_value]
-        markup.add(types.InlineKeyboardButton(
-            label, callback_data=f"docker:policy_set:{container_name}:{action_value}",
-        ))
-    markup.add(types.InlineKeyboardButton(
-        "\u274c Cancel", callback_data="docker:cancel",
-    ))
+        markup.add(
+            types.InlineKeyboardButton(
+                label,
+                callback_data=f"docker:policy_set:{container_name}:{action_value}",
+            )
+        )
+    markup.add(
+        types.InlineKeyboardButton(
+            "\u274c Cancel",
+            callback_data="docker:cancel",
+        )
+    )
     bot.send_message(
         chat_id,
         f"Choose monitoring policy for <b>{container_name}</b>:",

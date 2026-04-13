@@ -53,8 +53,12 @@ def run_command(
         logger.error("Command not found: %s", cmd[0])
         result = ShellResult("", f"Command not found: {cmd[0]}", 127)
 
-    logger.debug("run_command result: rc=%d stdout=%d bytes stderr=%d bytes",
-                 result.returncode, len(result.stdout), len(result.stderr))
+    logger.debug(
+        "run_command result: rc=%d stdout=%d bytes stderr=%d bytes",
+        result.returncode,
+        len(result.stdout),
+        len(result.stderr),
+    )
     return result
 
 
@@ -85,6 +89,10 @@ def run_shell(
     except subprocess.CalledProcessError as exc:
         result = ShellResult(exc.stdout or "", exc.stderr or "", exc.returncode)
 
-    logger.debug("run_shell result: rc=%d stdout=%d bytes stderr=%d bytes",
-                 result.returncode, len(result.stdout), len(result.stderr))
+    logger.debug(
+        "run_shell result: rc=%d stdout=%d bytes stderr=%d bytes",
+        result.returncode,
+        len(result.stdout),
+        len(result.stderr),
+    )
     return result

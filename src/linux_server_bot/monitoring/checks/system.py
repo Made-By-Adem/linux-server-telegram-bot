@@ -51,7 +51,8 @@ def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
     consumers = escape_html(top_result.stdout)
     logger.warning("CPU usage sustained at %.1f%%", usage2)
     send_to_all(
-        bot, config,
+        bot,
+        config,
         f"\U0001f525 CPU usage is high (>{threshold}%). "
         f"First: {usage:.1f}%, after 5s: {usage2:.1f}%.\n"
         f"Top consumers:\n<pre>{consumers}</pre>",
@@ -81,13 +82,15 @@ def check_temperature(bot: telebot.TeleBot, config: AppConfig) -> None:
 
     if fan_state == "1":
         send_to_all(
-            bot, config,
+            bot,
+            config,
             f"\U0001f321\ufe0f Temperature is high (>{threshold}\u00b0C). "
             f"Current: {temp_c:.1f}\u00b0C. Fans are ON (state: {fan_state}).",
         )
     else:
         send_to_all(
-            bot, config,
+            bot,
+            config,
             f"\U0001f321\ufe0f Temperature is high (>{threshold}\u00b0C). "
             f"Current: {temp_c:.1f}\u00b0C. Fans are NOT on (state: {fan_state}).",
         )

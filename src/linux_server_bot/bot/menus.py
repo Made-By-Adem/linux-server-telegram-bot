@@ -89,10 +89,7 @@ def inline_action_keyboard(
     produces callbacks ``"docker:start"``, ``"docker:stop"``.
     """
     markup = types.InlineKeyboardMarkup(row_width=row_width)
-    buttons = [
-        types.InlineKeyboardButton(label, callback_data=f"{module}:{action}")
-        for label, action in actions
-    ]
+    buttons = [types.InlineKeyboardButton(label, callback_data=f"{module}:{action}") for label, action in actions]
     # Add in rows
     for i in range(0, len(buttons), row_width):
         markup.add(*buttons[i : i + row_width])
@@ -114,10 +111,7 @@ def inline_item_keyboard(
     A cancel button is appended automatically.
     """
     markup = types.InlineKeyboardMarkup(row_width=row_width)
-    buttons = [
-        types.InlineKeyboardButton(name, callback_data=f"{module}:{action}:{name}")
-        for name in items
-    ]
+    buttons = [types.InlineKeyboardButton(name, callback_data=f"{module}:{action}:{name}") for name in items]
     for i in range(0, len(buttons), row_width):
         markup.add(*buttons[i : i + row_width])
     markup.add(

@@ -40,12 +40,14 @@ def list_available_logs() -> list[dict]:
     idx = 0
     for configured_path in config.logfiles:
         for filepath in _resolve_path(configured_path):
-            entries.append({
-                "index": idx,
-                "path": filepath,
-                "name": os.path.basename(filepath),
-                "size_bytes": _safe_size(filepath),
-            })
+            entries.append(
+                {
+                    "index": idx,
+                    "path": filepath,
+                    "name": os.path.basename(filepath),
+                    "size_bytes": _safe_size(filepath),
+                }
+            )
             idx += 1
     return entries
 

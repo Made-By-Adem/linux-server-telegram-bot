@@ -81,11 +81,16 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 return
             markup = inline_item_keyboard("compose", action, stack_names, row_width=2)
             label = {
-                "up": "bring up", "down": "bring down", "restart": "restart",
-                "pull": "pull & recreate", "logs": "view logs for",
+                "up": "bring up",
+                "down": "bring down",
+                "restart": "restart",
+                "pull": "pull & recreate",
+                "logs": "view logs for",
             }
             bot_inst.send_message(
-                chat_id, f"Which stack to {label.get(action, action)}?", reply_markup=markup,
+                chat_id,
+                f"Which stack to {label.get(action, action)}?",
+                reply_markup=markup,
             )
             return
 
