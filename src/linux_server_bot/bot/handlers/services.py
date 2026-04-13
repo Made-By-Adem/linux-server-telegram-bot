@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from linux_server_bot.bot.callbacks import register_callback
@@ -11,6 +12,7 @@ from linux_server_bot.bot.menus import (
     inline_action_keyboard,
     inline_item_keyboard,
 )
+from linux_server_bot.config import MonitoredItem, update_monitoring_policy
 from linux_server_bot.shared.actions.services import (
     get_service_statuses,
     service_action,
@@ -33,7 +35,20 @@ _ACTIONS = [
     ("\u23f9\u23f9 Stop all", "stop_all"),
     ("\U0001f504\U0001f504 Restart all", "restart_all"),
     ("\U0001f4ca Status", "status"),
+    ("\U0001f6e1 Policy", "policy"),
 ]
+
+_POLICY_LABELS = {
+    "ignore": "\U0001f6ab Ignore",
+    "notify": "\U0001f514 Notify",
+    "notify_restart": "\U0001f504 Notify + Restart",
+}
+
+_POLICY_ICONS = {
+    "ignore": "\U0001f6ab",
+    "notify": "\U0001f514",
+    "notify_restart": "\U0001f504",
+}
 
 
 def _send_services_menu(bot, chat_id: int) -> None:
@@ -53,6 +68,45 @@ def _send_status(bot, chat_id: int, services: list[str]) -> None:
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register all service management handlers."""
 
+    def _get_config_path() -> str:
+        return os.environ.get("CONFIG_PATH", "config.yaml")
+
+    def _send_policy_overview(bot_inst, chat_id: int) -> None:
+        """Show current monitoring policies for all services."""
+        items = config.monitoring.services
+        if not items:
+            bot_inst.send_message(chat_id, "No monitored services configured.")
+            return
+
+        lines = ["<b>Monitoring policies (services):</b>", ""]
+        for item in items:
+            icon = _POLICY_ICONS.get(item.on_failure, "?")
+            lines.append(f"{icon} <b>{item.name}</b>: {item.on_failure}")
+
+        lines.append("\nTap a service below to change its policy:")
+        markup = inline_item_keyboard("services", "policy_pick", [i.name for i in items], row_width=2)
+        bot_inst.send_message(chat_id, "\n".join(lines), reply_markup=markup, parse_mode="HTML")
+
+    def _send_policy_choice(bot_inst, chat_id: int, service_name: str) -> None:
+        """Show policy options for a specific service."""
+        from telebot import types
+
+        markup = types.InlineKeyboardMarkup(row_width=1)
+        for action_value in MonitoredItem.ACTIONS:
+            label = _POLICY_LABELS[action_value]
+            markup.add(types.InlineKeyboardButton(
+                label, callback_data=f"services:policy_set:{service_name}:{action_value}",
+            ))
+        markup.add(types.InlineKeyboardButton(
+            "\u274c Cancel", callback_data="services:cancel",
+        ))
+        bot_inst.send_message(
+            chat_id,
+            f"Choose monitoring policy for <b>{service_name}</b>:",
+            reply_markup=markup,
+            parse_mode="HTML",
+        )
+
     def _handle_callback(bot_inst, call, parts: list[str]) -> None:
         action = parts[0] if parts else None
         target = parts[1] if len(parts) > 1 else None
@@ -68,6 +122,36 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             _send_status(bot_inst, chat_id, config.services)
             return
 
+        # -- Policy management --
+        if action == "policy":
+            bot_inst.answer_callback_query(call.id)
+            _send_policy_overview(bot_inst, chat_id)
+            return
+
+        if action == "policy_pick" and target:
+            bot_inst.answer_callback_query(call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            _send_policy_choice(bot_inst, chat_id, target)
+            return
+
+        if action == "policy_set" and target:
+            # parts = ["policy_set", service_name, new_policy]
+            new_policy = parts[2] if len(parts) > 2 else None
+            if new_policy and new_policy in MonitoredItem.ACTIONS:
+                bot_inst.answer_callback_query(call.id, f"Setting {target} to {new_policy}...")
+                update_monitoring_policy("services", target, new_policy, _get_config_path())
+                bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+                icon = _POLICY_ICONS.get(new_policy, "")
+                bot_inst.send_message(
+                    chat_id,
+                    f"{icon} Policy for <b>{target}</b> set to <b>{new_policy}</b>.",
+                    parse_mode="HTML",
+                )
+            else:
+                bot_inst.answer_callback_query(call.id, "Invalid policy")
+            return
+
+        # -- Service management --
         if action in ("start", "stop", "restart") and not target:
             bot_inst.answer_callback_query(call.id)
             if not config.services:

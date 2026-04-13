@@ -26,25 +26,41 @@ def _restart_service(service_name: str) -> bool:
 
 
 def check_services(bot: telebot.TeleBot, config: AppConfig) -> None:
-    """Check all monitored services and auto-restart if down."""
+    """Check all monitored services, respecting per-service on_failure policy."""
     from linux_server_bot.shared.telegram import send_to_all
 
-    for service in config.monitoring.services:
-        logger.info("Checking service %s", service)
+    for item in config.monitoring.services:
+        service = item.name
+        policy = item.on_failure
+        logger.info("Checking service %s (policy: %s)", service, policy)
+
         if _is_service_running(service):
             logger.info("Service %s is running", service)
             continue
 
+        if policy == "ignore":
+            logger.info("Service %s is down, but policy is 'ignore' -- skipping", service)
+            continue
+
+        if policy == "notify":
+            logger.warning("Service %s is down (notify only)", service)
+            send_to_all(
+                bot, config,
+                f"\u26a0\ufe0f \U0001f4e6 Service <b>{service}</b> is down.",
+            )
+            continue
+
+        # policy == "notify_restart" (default)
         logger.warning("Service %s is down, attempting restart", service)
         if _restart_service(service):
             logger.info("Service %s restarted successfully", service)
             send_to_all(
                 bot, config,
-                f"\U0001f9be \U0001f4e6 Service {service} was down, but I have restarted it.",
+                f"\U0001f9be \U0001f4e6 Service <b>{service}</b> was down, but I have restarted it.",
             )
         else:
             logger.error("Service %s could not be restarted", service)
             send_to_all(
                 bot, config,
-                f"\U0001f613 \U0001f4e6 Service {service} is down and I could not restart it!",
+                f"\U0001f613 \U0001f4e6 Service <b>{service}</b> is down and I could not restart it!",
             )

@@ -52,11 +52,57 @@ class ComposeStack:
 
 
 @dataclass
+class MonitoredItem:
+    """A service or container with a failure-action policy.
+
+    ``on_failure`` is one of:
+    - ``"notify_restart"`` (default) -- notify *and* attempt restart.
+    - ``"notify"`` -- send a Telegram alert, but do nothing else.
+    - ``"ignore"`` -- silently skip.
+    """
+
+    name: str
+    on_failure: str = "notify_restart"
+
+    # Allowed values (class-level constant)
+    ACTIONS = ("ignore", "notify", "notify_restart")
+
+
+def _parse_monitored_items(raw: list) -> list[MonitoredItem]:
+    """Parse a list of strings or dicts into ``MonitoredItem`` objects.
+
+    Accepts both formats for backwards compatibility::
+
+        # simple (defaults to notify_restart)
+        services:
+          - nginx
+          - docker
+
+        # detailed
+        services:
+          - name: nginx
+            on_failure: notify
+          - name: docker
+            on_failure: ignore
+    """
+    items: list[MonitoredItem] = []
+    for entry in raw:
+        if isinstance(entry, str):
+            items.append(MonitoredItem(name=entry))
+        elif isinstance(entry, dict) and "name" in entry:
+            action = str(entry.get("on_failure", "notify_restart"))
+            if action not in MonitoredItem.ACTIONS:
+                action = "notify_restart"
+            items.append(MonitoredItem(name=entry["name"], on_failure=action))
+    return items
+
+
+@dataclass
 class MonitoringConfig:
     interval_minutes: int = 5
-    containers: list[str] = field(default_factory=list)
+    containers: list[MonitoredItem] = field(default_factory=list)
     servers: list[ServerEntry] = field(default_factory=list)
-    services: list[str] = field(default_factory=list)
+    services: list[MonitoredItem] = field(default_factory=list)
     thresholds: dict[str, int | float] = field(default_factory=lambda: {
         "cpu_percent": 80,
         "storage_percent": 90,
@@ -194,9 +240,9 @@ class AppConfig:
         ]
         self.monitoring = MonitoringConfig(
             interval_minutes=int(mon.get("interval_minutes", 5)),
-            containers=mon.get("containers", []),
+            containers=_parse_monitored_items(mon.get("containers", [])),
             servers=mon_servers,
-            services=mon.get("services", []),
+            services=_parse_monitored_items(mon.get("services", [])),
             thresholds=mon.get("thresholds", MonitoringConfig().thresholds),
             security=mon.get("security", MonitoringConfig().security),
         )
@@ -290,3 +336,67 @@ def reload_config(path: str | Path | None = None) -> None:
     data = _load_yaml(config_path)
     config.update_from_dict(data)
     logger.info("Config manually reloaded from %s", config_path)
+
+
+def update_monitoring_policy(
+    kind: str,
+    name: str,
+    on_failure: str,
+    config_path: str | Path | None = None,
+) -> None:
+    """Update the on_failure policy for a monitored service or container.
+
+    Writes the change to config.yaml (the watchdog auto-reloads it) and
+    updates the in-memory config immediately.
+
+    Parameters
+    ----------
+    kind:
+        ``"services"`` or ``"containers"``.
+    name:
+        Name of the service or container.
+    on_failure:
+        One of ``"ignore"``, ``"notify"``, ``"notify_restart"``.
+    """
+    if on_failure not in MonitoredItem.ACTIONS:
+        raise ValueError(f"Invalid on_failure value: {on_failure!r}")
+
+    path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
+    if not path.exists():
+        logger.warning("Config file %s not found, cannot update policy", path)
+        return
+
+    # Update the raw YAML (without env interpolation, to preserve ${VAR} refs)
+    raw_text = path.read_text(encoding="utf-8")
+    raw = yaml.safe_load(raw_text) or {}
+    mon = raw.setdefault("monitoring", {})
+    items = mon.get(kind, [])
+
+    # Find and update the item
+    updated = False
+    for i, entry in enumerate(items):
+        entry_name = entry if isinstance(entry, str) else entry.get("name", "")
+        if entry_name == name:
+            items[i] = {"name": name, "on_failure": on_failure}
+            updated = True
+            break
+
+    if not updated:
+        items.append({"name": name, "on_failure": on_failure})
+
+    mon[kind] = items
+    raw["monitoring"] = mon
+
+    path.write_text(
+        yaml.dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    logger.info("Updated %s policy for %s to %s", kind, name, on_failure)
+
+    # Immediate in-memory update
+    item_list = getattr(config.monitoring, kind, [])
+    for item in item_list:
+        if item.name == name:
+            item.on_failure = on_failure
+            return
+    item_list.append(MonitoredItem(name=name, on_failure=on_failure))

@@ -103,17 +103,28 @@ log_directory: ./logs
 monitoring:
   interval_minutes: 5
 
+  # Monitored containers with failure policy.
+  # on_failure options:
+  #   notify_restart  - send alert AND auto-restart (default)
+  #   notify          - send alert only, do not restart
+  #   ignore          - do nothing
+  # You can also use a plain string (e.g. "portainer") which defaults to notify_restart.
   containers:
-    - portainer
+    - name: portainer
+      on_failure: notify_restart
 
   servers:
     - name: "My VPS"
       host: "1.2.3.4"
       port: 443
 
+  # Monitored services with failure policy (same options as containers).
+  # Policies can be changed at runtime via the Telegram bot menu.
   services:
-    - nginx
-    - docker
+    - name: nginx
+      on_failure: notify_restart
+    - name: docker
+      on_failure: notify
 
   thresholds:
     cpu_percent: 80
