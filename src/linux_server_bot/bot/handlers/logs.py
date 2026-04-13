@@ -79,8 +79,27 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if not config.logfiles:
             bot.send_message(chat_id, "No log files configured.")
             return
-        markup = inline_item_keyboard("logs", "view", config.logfiles, row_width=1)
-        bot.send_message(chat_id, "Which log file do you want to see?", reply_markup=markup)
+
+        # Show which paths exist and which don't
+        available = []
+        missing = []
+        for path in config.logfiles:
+            if _is_glob(path) or os.path.exists(path):
+                available.append(path)
+            else:
+                missing.append(path)
+
+        if not available and missing:
+            msg = "No log files found on this server.\n\nMissing paths:\n"
+            msg += "\n".join(f"  - {p}" for p in missing)
+            bot.send_message(chat_id, msg)
+            return
+
+        markup = inline_item_keyboard("logs", "view", available, row_width=1)
+        msg = "Which log file do you want to see?"
+        if missing:
+            msg += "\n\nNot found on this server:\n" + "\n".join(f"  - {p}" for p in missing)
+        bot.send_message(chat_id, msg, reply_markup=markup)
 
     def _handle_callback(bot_inst, call, parts: list[str]) -> None:
         action = parts[0] if parts else None
