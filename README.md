@@ -49,22 +49,22 @@ Open the menu with `/menu` or a bot command and manage your server on-demand: st
 
 ### 📡 Background Monitoring
 
-The bot continuously watches your server and sends you a message when something needs attention. New containers and services are **auto-detected** -- no manual configuration needed.
+The bot continuously watches your server and sends you a message when something needs attention. Only services and containers explicitly listed in `config.yaml` are monitored -- giving you full control over what gets checked.
 
 **What it monitors:**
 
 | Check | What happens |
 |-------|-------------|
-| Docker containers | Auto-detected, configurable per container: notify, notify + restart, or ignore |
-| Systemd services | Auto-detected (all enabled services), same configurable policy |
-| Server/website ping | Alert when a server goes offline or comes back online |
+| Docker containers | Only configured containers, with per-item policy: notify, notify + restart, or ignore |
+| Systemd services | Only configured services, same per-item policy |
+| Server/website ping | Alert on state change (online/offline), not every cycle |
 | CPU usage | Alert when CPU exceeds threshold (double-verified, shows top processes) |
 | Temperature | Alert when temperature exceeds threshold (reports fan state) |
 | Disk usage | Alert when storage exceeds threshold |
 | SSH failed logins | Alert on brute force attempts (>10 failures) |
 | Fail2ban bans | Alert when an IP gets banned |
 
-Containers and services are auto-detected at each monitoring cycle. Failure policies can be changed per item via the Telegram bot menu or in `config.yaml`. Monitoring thresholds (CPU, disk, temperature) are adjustable via the Telegram bot, the API (`PUT /api/monitoring/thresholds`), or directly in `config.yaml`. Monitoring interval and servers to ping are configurable in `config.yaml`.
+Services and containers are configured in `config.yaml` under `services` and `containers` (one list each, used by both the bot menu and monitoring). You can add/remove items and change failure policies via the Telegram bot menu, the API (`POST /api/services/add`, `DELETE /api/services/{name}`, etc.), or directly in `config.yaml`. Monitoring thresholds (CPU, disk, temperature) are adjustable via the Telegram bot, the API (`PUT /api/monitoring/thresholds`), or directly in `config.yaml`. Monitoring interval and servers to ping are configurable in `config.yaml`.
 
 ### 🌐 HTTP API (Optional)
 
@@ -237,14 +237,14 @@ All settings are in `config.yaml` with `${VAR}` syntax for environment variable 
 | Section | What to configure | Default |
 |---------|-------------------|---------|
 | `features` | Toggle features on/off (hides menu buttons) | All enabled |
-| `services` | Extra services for bot menu (auto-detected by default) | -- |
-| `containers` | Extra containers for bot menu (auto-detected by default) | -- |
+| `services` | Services to manage and monitor (with per-item policy) | -- |
+| `containers` | Containers to manage and monitor (with per-item policy) | -- |
 | `compose_stacks` | Docker Compose stacks with name and path | Example stack |
 | `servers` | Servers to ping (name, host, port) | Example server |
 | `logfiles` | Log file paths, directories, or glob patterns | Security + system logs |
 | `scripts` | Paths to update-containers and backup scripts | /opt/scripts/ |
 | `api` | API enabled/port/key for HTTP API | Enabled on port 8120 |
-| `monitoring` | Interval, thresholds, per-item failure policies | 5 min, auto-detect |
+| `monitoring` | Interval, thresholds, servers to ping | 5 min interval |
 
 **Hot-reload**: Edit `config.yaml` while the bot is running -- changes are picked up automatically. Use `/reload` in Telegram to trigger a manual reload.
 
@@ -299,8 +299,8 @@ api:
 
 | Feature | Interactive (menu) | Automatic (monitoring) | API (optional) |
 |---------|-------------------|----------------------|----------------|
-| Docker containers | Start, stop, restart, status, policy | Auto-detected, configurable policy | All actions via HTTP |
-| Systemd services | Start, stop, restart, status, policy | Auto-detected, configurable policy | All actions via HTTP |
+| Docker containers | Start, stop, restart, status, policy | Configured containers, per-item policy | All actions + CRUD via HTTP |
+| Systemd services | Start, stop, restart, status, policy | Configured services, per-item policy | All actions + CRUD via HTTP |
 | Compose stacks | Up, down, restart, pull, logs | -- | All actions via HTTP |
 | System info | On-demand overview | CPU, temp & disk alerts | On-demand via HTTP |
 | Security | Full overview on request | Brute force & ban alerts | Full overview via HTTP |
@@ -543,10 +543,10 @@ docker compose restart bot
 # Check monitoring logs
 docker compose logs monitor
 
-# Services and containers are auto-detected.
+# Only services and containers listed in config.yaml are monitored.
+# Make sure they are listed under 'services' and 'containers' sections.
 # Check if the failure policy is not set to 'ignore':
-# Look in config.yaml under monitoring.services / monitoring.containers
-# or check via the Policy button in the Telegram bot menu.
+# Use the Policy button in the Telegram bot menu, or check config.yaml.
 ```
 
 **API returning 403 Forbidden**

@@ -35,11 +35,30 @@ api:
   port: 8120
   api_key: ${API_KEY}
 
-# Systemd services (fallback list if auto-detection is unavailable)
+# Systemd services to manage and monitor.
+# Only services listed here are shown in the bot menu AND checked by
+# the monitoring loop. You can add/remove services via the API or
+# edit this file directly (changes are hot-reloaded).
+# on_failure options:
+#   notify          - send alert only, do not restart (default)
+#   notify_restart  - send alert AND auto-restart
+#   ignore          - do nothing
 services:
-  - docker
-  - ufw
-  - nginx
+  - name: nginx
+    on_failure: notify
+  - name: docker
+    on_failure: notify
+  - name: ufw
+    on_failure: notify
+
+# Docker containers to manage and monitor.
+# Only containers listed here are shown in the bot menu AND checked by
+# the monitoring loop. You can add/remove containers via the API or
+# edit this file directly (changes are hot-reloaded).
+# Same on_failure options as services above.
+containers:
+  - name: portainer
+    on_failure: notify
 
 # Docker Compose stacks
 compose_stacks:
@@ -48,7 +67,7 @@ compose_stacks:
   - name: "monitoring"
     path: /opt/stacks/monitoring
 
-# Servers to ping
+# Servers to ping (used by both bot menu and monitoring loop)
 servers:
   - name: "My VPS"
     host: "1.2.3.4"
@@ -98,31 +117,13 @@ log_directory: ./logs
 monitoring:
   interval_minutes: 5
 
-  # Container failure policies (auto-detected from Docker).
-  # All containers are monitored automatically. Use this list only to
-  # override the default policy for specific containers.
-  # on_failure options:
-  #   notify          - send alert only, do not restart (default)
-  #   notify_restart  - send alert AND auto-restart
-  #   ignore          - do nothing
-  # Policies can also be changed at runtime via the Telegram bot menu.
-  containers:
-    - name: portainer
-      on_failure: notify
-
+  # Servers to ping (monitoring-specific, with state-change alerts).
+  # These servers are pinged every interval and you get notified only
+  # when a server goes offline or comes back online.
   servers:
     - name: "My VPS"
       host: "1.2.3.4"
       port: 443
-
-  # Service failure policies (auto-detected from systemd enabled services).
-  # All enabled services are monitored automatically. Use this list only
-  # to override the default policy for specific services.
-  services:
-    - name: nginx
-      on_failure: notify
-    - name: docker
-      on_failure: notify
 
   thresholds:
     cpu_percent: 80

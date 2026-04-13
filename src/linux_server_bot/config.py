@@ -102,9 +102,7 @@ def _parse_monitored_items(raw: list) -> list[MonitoredItem]:
 @dataclass
 class MonitoringConfig:
     interval_minutes: int = 5
-    containers: list[MonitoredItem] = field(default_factory=list)
     servers: list[ServerEntry] = field(default_factory=list)
-    services: list[MonitoredItem] = field(default_factory=list)
     thresholds: dict[str, int | float] = field(
         default_factory=lambda: {
             "cpu_percent": 80,
@@ -119,20 +117,6 @@ class MonitoringConfig:
             "check_ssh_sessions": True,
         }
     )
-
-    def get_service_policy(self, name: str) -> str:
-        """Look up the on_failure policy for a service, default ``'notify'``."""
-        for item in self.services:
-            if item.name == name:
-                return item.on_failure
-        return "notify"
-
-    def get_container_policy(self, name: str) -> str:
-        """Look up the on_failure policy for a container, default ``'notify'``."""
-        for item in self.containers:
-            if item.name == name:
-                return item.on_failure
-        return "notify"
 
 
 @dataclass
@@ -181,7 +165,8 @@ class AppConfig:
     allowed_users: list[int] = field(default_factory=list)
     wol: WolConfig = field(default_factory=WolConfig)
     features: FeaturesConfig = field(default_factory=FeaturesConfig)
-    services: list[str] = field(default_factory=list)
+    services: list[MonitoredItem] = field(default_factory=list)
+    containers: list[MonitoredItem] = field(default_factory=list)
     compose_stacks: list[ComposeStack] = field(default_factory=list)
     servers: list[ServerEntry] = field(default_factory=list)
     logfiles: list[str] = field(default_factory=list)
@@ -190,6 +175,28 @@ class AppConfig:
     api: ApiConfig = field(default_factory=ApiConfig)
     server_states_path: str = "server_states.json"
     log_directory: str = "./logs"
+
+    def get_service_names(self) -> list[str]:
+        """Return configured service names."""
+        return [s.name for s in self.services]
+
+    def get_container_names(self) -> list[str]:
+        """Return configured container names."""
+        return [c.name for c in self.containers]
+
+    def get_service_policy(self, name: str) -> str:
+        """Look up the on_failure policy for a service, default ``'notify'``."""
+        for item in self.services:
+            if item.name == name:
+                return item.on_failure
+        return "notify"
+
+    def get_container_policy(self, name: str) -> str:
+        """Look up the on_failure policy for a container, default ``'notify'``."""
+        for item in self.containers:
+            if item.name == name:
+                return item.on_failure
+        return "notify"
 
     def update_from_dict(self, data: dict[str, Any]) -> None:
         """Update config fields from a parsed YAML dict."""
@@ -224,7 +231,8 @@ class AppConfig:
             else FeaturesConfig()
         )
 
-        self.services = data.get("services", [])
+        self.services = _parse_monitored_items(data.get("services", []))
+        self.containers = _parse_monitored_items(data.get("containers", []))
         self.logfiles = data.get("logfiles", [])
         self.server_states_path = data.get("server_states_path", "server_states.json")
         self.log_directory = data.get("log_directory", "./logs")
@@ -271,9 +279,7 @@ class AppConfig:
         ]
         self.monitoring = MonitoringConfig(
             interval_minutes=int(mon.get("interval_minutes", 5)),
-            containers=_parse_monitored_items(mon.get("containers", [])),
             servers=mon_servers,
-            services=_parse_monitored_items(mon.get("services", [])),
             thresholds=mon.get("thresholds", MonitoringConfig().thresholds),
             security=mon.get("security", MonitoringConfig().security),
         )
@@ -409,8 +415,7 @@ def update_monitoring_policy(
     # Update the raw YAML (without env interpolation, to preserve ${VAR} refs)
     raw_text = path.read_text(encoding="utf-8")
     raw = yaml.safe_load(raw_text) or {}
-    mon = raw.setdefault("monitoring", {})
-    items = mon.get(kind, [])
+    items = raw.get(kind, [])
 
     # Find and update the item
     updated = False
@@ -424,8 +429,7 @@ def update_monitoring_policy(
     if not updated:
         items.append({"name": name, "on_failure": on_failure})
 
-    mon[kind] = items
-    raw["monitoring"] = mon
+    raw[kind] = items
 
     path.write_text(
         yaml.dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True),
@@ -434,7 +438,7 @@ def update_monitoring_policy(
     logger.info("Updated %s policy for %s to %s", kind, name, on_failure)
 
     # Immediate in-memory update
-    item_list = getattr(config.monitoring, kind, [])
+    item_list = getattr(config, kind, [])
     for item in item_list:
         if item.name == name:
             item.on_failure = on_failure
@@ -491,3 +495,100 @@ def update_monitoring_threshold(
 
     # Immediate in-memory update
     config.monitoring.thresholds[key] = value
+
+
+def add_monitored_item(
+    kind: str,
+    name: str,
+    on_failure: str = "notify",
+    config_path: str | Path | None = None,
+) -> None:
+    """Add a service or container to the config.
+
+    Parameters
+    ----------
+    kind:
+        ``"services"`` or ``"containers"``.
+    name:
+        Name of the service or container.
+    on_failure:
+        One of ``"ignore"``, ``"notify"``, ``"notify_restart"``.
+    """
+    if kind not in ("services", "containers"):
+        raise ValueError(f"Invalid kind: {kind!r}")
+    if on_failure not in MonitoredItem.ACTIONS:
+        raise ValueError(f"Invalid on_failure value: {on_failure!r}")
+
+    # Check if already exists
+    item_list: list[MonitoredItem] = getattr(config, kind, [])
+    for item in item_list:
+        if item.name == name:
+            raise ValueError(f"{kind[:-1].capitalize()} '{name}' already exists")
+
+    path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
+    if not path.exists():
+        logger.warning("Config file %s not found, cannot add item", path)
+        return
+
+    raw_text = path.read_text(encoding="utf-8")
+    raw = yaml.safe_load(raw_text) or {}
+    items = raw.get(kind, [])
+    items.append({"name": name, "on_failure": on_failure})
+    raw[kind] = items
+
+    path.write_text(
+        yaml.dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    logger.info("Added %s '%s' with policy %s", kind[:-1], name, on_failure)
+
+    # Immediate in-memory update
+    item_list.append(MonitoredItem(name=name, on_failure=on_failure))
+
+
+def remove_monitored_item(
+    kind: str,
+    name: str,
+    config_path: str | Path | None = None,
+) -> None:
+    """Remove a service or container from the config.
+
+    Parameters
+    ----------
+    kind:
+        ``"services"`` or ``"containers"``.
+    name:
+        Name of the service or container to remove.
+    """
+    if kind not in ("services", "containers"):
+        raise ValueError(f"Invalid kind: {kind!r}")
+
+    path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
+    if not path.exists():
+        logger.warning("Config file %s not found, cannot remove item", path)
+        return
+
+    raw_text = path.read_text(encoding="utf-8")
+    raw = yaml.safe_load(raw_text) or {}
+    items = raw.get(kind, [])
+
+    new_items = []
+    for entry in items:
+        entry_name = entry if isinstance(entry, str) else entry.get("name", "")
+        if entry_name != name:
+            new_items.append(entry)
+
+    if len(new_items) == len(items):
+        raise ValueError(f"{kind[:-1].capitalize()} '{name}' not found")
+
+    raw[kind] = new_items
+
+    path.write_text(
+        yaml.dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    logger.info("Removed %s '%s'", kind[:-1], name)
+
+    # Immediate in-memory update
+    item_list: list[MonitoredItem] = getattr(config, kind, [])
+    config.__dict__[kind] = [i for i in item_list if i.name != name]

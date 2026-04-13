@@ -80,10 +80,12 @@ def container_action(action: str, name: str) -> dict:
     return {"name": name, "action": action, "success": result.success, "output": result.stdout, "error": result.stderr}
 
 
-def container_action_all(action: str) -> list[dict]:
-    """Perform a docker action on all containers."""
+def container_action_all(action: str, names: list[str] | None = None) -> list[dict]:
+    """Perform a docker action on the given containers (or all if not specified)."""
+    if names is None:
+        names = get_container_names()
     results = []
-    for name in get_container_names():
+    for name in names:
         results.append(container_action(action, name))
     if action == "stop":
         time.sleep(1)

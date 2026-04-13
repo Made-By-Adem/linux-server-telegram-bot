@@ -16,11 +16,9 @@ from linux_server_bot.config import MonitoredItem, update_monitoring_policy
 from linux_server_bot.shared.actions.docker import (
     container_action,
     container_action_all,
-    get_container_names,
-    get_container_statuses_text,
+    get_container_statuses,
 )
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.telegram import escape_html
 
 if TYPE_CHECKING:
     import telebot
@@ -58,13 +56,25 @@ def _send_docker_menu(bot, chat_id: int) -> None:
     bot.send_message(chat_id, "What do you want to do?", reply_markup=markup)
 
 
-def _send_status(bot, chat_id: int) -> None:
-    text = get_container_statuses_text()
-    bot.send_message(
-        chat_id,
-        f"<b>Status containers:</b>\n{escape_html(text)}",
-        parse_mode="HTML",
-    )
+def _send_status(bot, chat_id: int, config) -> None:
+    """Show status of configured containers."""
+    container_names = config.get_container_names()
+    if not container_names:
+        bot.send_message(chat_id, "No containers configured. Add containers to config.yaml.")
+        return
+
+    all_statuses = get_container_statuses()
+    status_map = {s.name: s for s in all_statuses}
+
+    lines = ["<b>Status containers:</b>"]
+    for name in container_names:
+        s = status_map.get(name)
+        if s:
+            icon = "\u2705" if s.running else "\u274c"
+            lines.append(f"{icon} {s.name}: {s.status}")
+        else:
+            lines.append(f"\u2753 {name}: not found on server")
+    bot.send_message(chat_id, "\n".join(lines), parse_mode="HTML")
 
 
 def _get_config_path() -> str:
@@ -72,20 +82,20 @@ def _get_config_path() -> str:
 
 
 def _send_policy_overview(bot, chat_id: int, config) -> None:
-    """Show current monitoring policies for all auto-detected containers."""
-    all_containers = get_container_names()
-    if not all_containers:
-        bot.send_message(chat_id, "No Docker containers detected.")
+    """Show current monitoring policies for all configured containers."""
+    container_names = config.get_container_names()
+    if not container_names:
+        bot.send_message(chat_id, "No containers configured. Add containers to config.yaml.")
         return
 
     lines = ["<b>Monitoring policies (containers):</b>", ""]
-    for name in all_containers:
-        policy = config.monitoring.get_container_policy(name)
+    for name in container_names:
+        policy = config.get_container_policy(name)
         icon = _POLICY_ICONS.get(policy, "?")
         lines.append(f"{icon} <b>{name}</b>: {policy}")
 
     lines.append("\nTap a container below to change its policy:")
-    markup = inline_item_keyboard("docker", "policy_pick", all_containers, row_width=2)
+    markup = inline_item_keyboard("docker", "policy_pick", container_names, row_width=2)
     bot.send_message(chat_id, "\n".join(lines), reply_markup=markup, parse_mode="HTML")
 
 
@@ -131,7 +141,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id, "Fetching status...")
-            _send_status(bot_inst, chat_id)
+            _send_status(bot_inst, chat_id, config)
             return
 
         # -- Policy management --
@@ -164,14 +174,14 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         # -- Container management --
-        # Single-container actions requiring target selection
+        container_names = config.get_container_names()
+
         if action in ("start", "stop", "restart") and not target:
             safe_answer_callback_query(bot_inst, call.id)
-            containers = get_container_names()
-            if not containers:
-                bot_inst.send_message(chat_id, "No containers found.")
+            if not container_names:
+                bot_inst.send_message(chat_id, "No containers configured.")
                 return
-            markup = inline_item_keyboard("docker", action, containers, row_width=2)
+            markup = inline_item_keyboard("docker", action, container_names, row_width=2)
             bot_inst.send_message(chat_id, f"Which container to {action}?", reply_markup=markup)
             return
 
@@ -182,19 +192,19 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
             bot_inst.send_message(chat_id, msg)
-            _send_status(bot_inst, chat_id)
+            _send_status(bot_inst, chat_id, config)
             return
 
         # All-container actions
         if action in ("start_all", "stop_all", "restart_all"):
             real_action = action.replace("_all", "")
             safe_answer_callback_query(bot_inst, call.id, f"{real_action.capitalize()}ing all containers...")
-            results = container_action_all(real_action)
+            results = container_action_all(real_action, container_names)
             failures = [r for r in results if not r["success"]]
             if failures:
                 lines = [f"\u26a0\ufe0f {r['name']}: {r['error']}" for r in failures]
                 bot_inst.send_message(chat_id, "\n".join(lines))
-            _send_status(bot_inst, chat_id)
+            _send_status(bot_inst, chat_id, config)
             return
 
         safe_answer_callback_query(bot_inst, call.id, "Unknown action")
@@ -204,11 +214,11 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
-        _send_status(bot, message.chat.id)
+        _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
-        _send_status(bot, message.chat.id)
+        _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)

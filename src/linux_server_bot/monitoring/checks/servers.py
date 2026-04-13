@@ -84,6 +84,7 @@ def check_servers(bot: telebot.TeleBot, config: AppConfig) -> None:
                     send_to_all(bot, config, f"\u2705 Server {name} is back online.")
             else:
                 current[name] = "offline"
-                send_to_all(bot, config, f"\u26a0\ufe0f Server {name} is offline!")
+                if previous.get(name) != "offline":
+                    send_to_all(bot, config, f"\u26a0\ufe0f Server {name} is offline!")
 
     _save_states(states_path, current)

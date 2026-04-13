@@ -533,6 +533,122 @@ Without confirmation:
 
 ---
 
+## Monitored Items (Services & Containers CRUD)
+
+### `GET /api/services/list`
+
+List all configured services with their monitoring policy.
+
+```bash
+curl -s -H "X-API-Key: $KEY" $URL/services/list
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {"name": "nginx", "on_failure": "notify"},
+    {"name": "docker", "on_failure": "notify"}
+  ]
+}
+```
+
+### `POST /api/services/add`
+
+Add a new service to monitor.
+
+```bash
+curl -s -X POST -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/services/add -d '{"name": "ufw", "on_failure": "notify"}'
+```
+
+```json
+{"success": true, "data": {"name": "ufw", "on_failure": "notify"}}
+```
+
+### `DELETE /api/services/{name}`
+
+Remove a service from monitoring.
+
+```bash
+curl -s -X DELETE -H "X-API-Key: $KEY" $URL/services/nginx
+```
+
+```json
+{"success": true}
+```
+
+### `PUT /api/services/{name}/policy`
+
+Update the monitoring policy for a service.
+
+```bash
+curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/services/nginx/policy -d '{"name": "nginx", "on_failure": "notify_restart"}'
+```
+
+```json
+{"success": true, "data": {"name": "nginx", "on_failure": "notify_restart"}}
+```
+
+### `GET /api/containers/list`
+
+List all configured containers with their monitoring policy.
+
+```bash
+curl -s -H "X-API-Key: $KEY" $URL/containers/list
+```
+
+```json
+{
+  "success": true,
+  "data": [
+    {"name": "portainer", "on_failure": "notify"},
+    {"name": "nginx", "on_failure": "notify_restart"}
+  ]
+}
+```
+
+### `POST /api/containers/add`
+
+Add a new container to monitor.
+
+```bash
+curl -s -X POST -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/containers/add -d '{"name": "redis", "on_failure": "notify_restart"}'
+```
+
+```json
+{"success": true, "data": {"name": "redis", "on_failure": "notify_restart"}}
+```
+
+### `DELETE /api/containers/{name}`
+
+Remove a container from monitoring.
+
+```bash
+curl -s -X DELETE -H "X-API-Key: $KEY" $URL/containers/portainer
+```
+
+```json
+{"success": true}
+```
+
+### `PUT /api/containers/{name}/policy`
+
+Update the monitoring policy for a container.
+
+```bash
+curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/containers/portainer/policy -d '{"name": "portainer", "on_failure": "ignore"}'
+```
+
+```json
+{"success": true, "data": {"name": "portainer", "on_failure": "ignore"}}
+```
+
+---
+
 ## Config Reload
 
 ### `POST /api/config/reload`

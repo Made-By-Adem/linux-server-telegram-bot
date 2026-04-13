@@ -10,7 +10,15 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from linux_server_bot.api.auth import verify_api_key
-from linux_server_bot.config import THRESHOLD_KEYS, config, reload_config, update_monitoring_threshold
+from linux_server_bot.config import (
+    THRESHOLD_KEYS,
+    add_monitored_item,
+    config,
+    reload_config,
+    remove_monitored_item,
+    update_monitoring_policy,
+    update_monitoring_threshold,
+)
 from linux_server_bot.shared.actions import (
     backups,
     compose,
@@ -48,6 +56,11 @@ class ThresholdUpdateRequest(BaseModel):
     value: int | float
 
 
+class MonitoredItemRequest(BaseModel):
+    name: str
+    on_failure: str = "notify"
+
+
 # ---------------------------------------------------------------------------
 # Docker
 # ---------------------------------------------------------------------------
@@ -57,8 +70,14 @@ class ThresholdUpdateRequest(BaseModel):
 async def docker_status():
     if not os.path.exists("/var/run/docker.sock"):
         return {"success": False, "error": "Docker socket not available"}
-    statuses = docker.get_container_statuses()
-    return {"success": True, "data": [asdict(s) for s in statuses]}
+    container_names = config.get_container_names()
+    if not container_names:
+        return {"success": True, "data": []}
+    all_statuses = docker.get_container_statuses()
+    # Filter to only configured containers
+    configured = set(container_names)
+    filtered = [s for s in all_statuses if s.name in configured]
+    return {"success": True, "data": [asdict(s) for s in filtered]}
 
 
 @router.post("/docker/{action}/{name}")
@@ -74,7 +93,7 @@ async def docker_action_all(action: str):
     if action not in ("start_all", "stop_all", "restart_all"):
         return {"success": False, "error": f"Invalid action: {action}"}
     real_action = action.replace("_all", "")
-    results = docker.container_action_all(real_action)
+    results = docker.container_action_all(real_action, config.get_container_names())
     return {"success": all(r["success"] for r in results), "data": results}
 
 
@@ -90,8 +109,10 @@ async def docker_cleanup():
 
 @router.get("/services/status")
 async def services_status():
-    all_services = services.get_enabled_service_names() or config.services
-    statuses = services.get_service_statuses(all_services)
+    service_names = config.get_service_names()
+    if not service_names:
+        return {"success": True, "data": []}
+    statuses = services.get_service_statuses(service_names)
     return {"success": True, "data": [asdict(s) for s in statuses]}
 
 
@@ -376,6 +397,81 @@ async def reboot_server(req: RebootRequest):
         return {"success": False, "error": "Confirmation required (set confirm: true)"}
     result = run_command(["sudo", "reboot", "now"])
     return {"success": result.success, "error": result.stderr if not result.success else ""}
+
+
+# ---------------------------------------------------------------------------
+# Monitored Items (services & containers CRUD)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/services/list")
+async def services_list():
+    return {
+        "success": True,
+        "data": [{"name": s.name, "on_failure": s.on_failure} for s in config.services],
+    }
+
+
+@router.post("/services/add")
+async def services_add(req: MonitoredItemRequest):
+    try:
+        add_monitored_item("services", req.name, req.on_failure)
+        return {"success": True, "data": {"name": req.name, "on_failure": req.on_failure}}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.delete("/services/{name}")
+async def services_remove(name: str):
+    try:
+        remove_monitored_item("services", name)
+        return {"success": True}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.put("/services/{name}/policy")
+async def services_update_policy(name: str, req: MonitoredItemRequest):
+    try:
+        update_monitoring_policy("services", name, req.on_failure)
+        return {"success": True, "data": {"name": name, "on_failure": req.on_failure}}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/containers/list")
+async def containers_list():
+    return {
+        "success": True,
+        "data": [{"name": c.name, "on_failure": c.on_failure} for c in config.containers],
+    }
+
+
+@router.post("/containers/add")
+async def containers_add(req: MonitoredItemRequest):
+    try:
+        add_monitored_item("containers", req.name, req.on_failure)
+        return {"success": True, "data": {"name": req.name, "on_failure": req.on_failure}}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.delete("/containers/{name}")
+async def containers_remove(name: str):
+    try:
+        remove_monitored_item("containers", name)
+        return {"success": True}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.put("/containers/{name}/policy")
+async def containers_update_policy(name: str, req: MonitoredItemRequest):
+    try:
+        update_monitoring_policy("containers", name, req.on_failure)
+        return {"success": True, "data": {"name": name, "on_failure": req.on_failure}}
+    except ValueError as e:
+        return {"success": False, "error": str(e)}
 
 
 # ---------------------------------------------------------------------------
