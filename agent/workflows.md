@@ -230,6 +230,28 @@ Example of how an AI agent can autonomously monitor and remediate issues. Run pe
    POST /api/backups/trigger      → start backup
 ```
 
+## 11. Threshold Management
+
+View and adjust monitoring thresholds dynamically.
+
+```bash
+# 1. Check current thresholds
+curl -s -H "X-API-Key: $KEY" $URL/monitoring/thresholds
+
+# 2. Raise CPU threshold if legitimate workload causes frequent alerts
+curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/monitoring/thresholds -d '{"key": "cpu_percent", "value": 90}'
+
+# 3. Lower disk threshold for early warning
+curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/monitoring/thresholds -d '{"key": "storage_percent", "value": 80}'
+
+# 4. Verify new thresholds
+curl -s -H "X-API-Key: $KEY" $URL/monitoring/thresholds
+```
+
+---
+
 **Key principles for AI agents:**
 - Always check status **before and after** an action to verify the result
 - Use `/api/command` as a fallback for diagnostics not covered by dedicated endpoints

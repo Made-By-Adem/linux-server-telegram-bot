@@ -419,3 +419,54 @@ def update_monitoring_policy(
             item.on_failure = on_failure
             return
     item_list.append(MonitoredItem(name=name, on_failure=on_failure))
+
+
+# Valid threshold keys and their allowed ranges
+THRESHOLD_KEYS = {
+    "cpu_percent": (1, 100),
+    "storage_percent": (1, 100),
+    "temperature_celsius": (1, 150),
+}
+
+
+def update_monitoring_threshold(
+    key: str,
+    value: int | float,
+    config_path: str | Path | None = None,
+) -> None:
+    """Update a monitoring threshold in config.yaml and in-memory config.
+
+    Parameters
+    ----------
+    key:
+        One of ``"cpu_percent"``, ``"storage_percent"``, ``"temperature_celsius"``.
+    value:
+        New threshold value (must be within the valid range for the key).
+    """
+    if key not in THRESHOLD_KEYS:
+        raise ValueError(f"Invalid threshold key: {key!r}")
+
+    lo, hi = THRESHOLD_KEYS[key]
+    if not (lo <= value <= hi):
+        raise ValueError(f"{key} must be between {lo} and {hi}")
+
+    path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
+    if not path.exists():
+        logger.warning("Config file %s not found, cannot update threshold", path)
+        return
+
+    raw_text = path.read_text(encoding="utf-8")
+    raw = yaml.safe_load(raw_text) or {}
+    mon = raw.setdefault("monitoring", {})
+    thresholds = mon.setdefault("thresholds", {})
+    thresholds[key] = value
+    raw["monitoring"] = mon
+
+    path.write_text(
+        yaml.dump(raw, default_flow_style=False, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    logger.info("Updated threshold %s to %s", key, value)
+
+    # Immediate in-memory update
+    config.monitoring.thresholds[key] = value

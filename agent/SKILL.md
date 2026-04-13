@@ -87,6 +87,13 @@ All endpoints return JSON with a `success` boolean:
 | POST | `/api/sysinfo/stress-test?minutes=1` | Run CPU stress test (feature-flag gated) |
 | POST | `/api/sysinfo/fan?state=0` | Set fan state: 0=off/auto, 1=on (feature-flag gated) |
 
+### Monitoring Thresholds
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/monitoring/thresholds` | Get current thresholds (cpu_percent, storage_percent, temperature_celsius) |
+| PUT | `/api/monitoring/thresholds` | Update a threshold (body: `{"key": "cpu_percent", "value": 85}`) |
+
 ### Security
 
 | Method | Path | Description |

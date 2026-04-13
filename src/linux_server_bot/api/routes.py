@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from linux_server_bot.api.auth import verify_api_key
-from linux_server_bot.config import config, reload_config
+from linux_server_bot.config import THRESHOLD_KEYS, config, reload_config, update_monitoring_threshold
 from linux_server_bot.shared.actions import (
     backups,
     compose,
@@ -41,6 +41,11 @@ class CommandRequest(BaseModel):
 
 class RebootRequest(BaseModel):
     confirm: bool = False
+
+
+class ThresholdUpdateRequest(BaseModel):
+    key: str
+    value: int | float
 
 
 # ---------------------------------------------------------------------------
@@ -204,6 +209,31 @@ async def sysinfo_fan(state: int = 0):
     if state not in (0, 1):
         return {"success": False, "error": "State must be 0 (off/auto) or 1 (on)"}
     return sysinfo.set_fan_state(state)
+
+
+# ---------------------------------------------------------------------------
+# Monitoring Thresholds
+# ---------------------------------------------------------------------------
+
+
+@router.get("/monitoring/thresholds")
+async def monitoring_thresholds():
+    return {"success": True, "data": dict(config.monitoring.thresholds)}
+
+
+@router.put("/monitoring/thresholds")
+async def monitoring_thresholds_update(req: ThresholdUpdateRequest):
+    if req.key not in THRESHOLD_KEYS:
+        valid = ", ".join(THRESHOLD_KEYS)
+        return {"success": False, "error": f"Invalid key: {req.key}. Valid keys: {valid}"}
+    lo, hi = THRESHOLD_KEYS[req.key]
+    if not (lo <= req.value <= hi):
+        return {"success": False, "error": f"Value must be between {lo} and {hi}"}
+    try:
+        update_monitoring_threshold(req.key, req.value)
+        return {"success": True, "data": dict(config.monitoring.thresholds)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # ---------------------------------------------------------------------------

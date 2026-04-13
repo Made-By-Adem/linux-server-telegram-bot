@@ -64,7 +64,7 @@ The bot continuously watches your server and sends you a message when something 
 | SSH failed logins | Alert on brute force attempts (>10 failures) |
 | Fail2ban bans | Alert when an IP gets banned |
 
-Containers and services are auto-detected at each monitoring cycle. Failure policies can be changed per item via the Telegram bot menu or in `config.yaml`. Monitoring interval, thresholds, and servers to ping are configurable in `config.yaml`.
+Containers and services are auto-detected at each monitoring cycle. Failure policies can be changed per item via the Telegram bot menu or in `config.yaml`. Monitoring thresholds (CPU, disk, temperature) are adjustable via the Telegram bot, the API (`PUT /api/monitoring/thresholds`), or directly in `config.yaml`. Monitoring interval and servers to ping are configurable in `config.yaml`.
 
 ### 🌐 HTTP API (Optional)
 

@@ -283,6 +283,61 @@ curl -s -X POST -H "X-API-Key: $KEY" "$URL/sysinfo/fan?state=1"
 
 ---
 
+## Monitoring Thresholds
+
+### `GET /api/monitoring/thresholds`
+
+Get current monitoring thresholds.
+
+```bash
+curl -s -H "X-API-Key: $KEY" $URL/monitoring/thresholds
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "cpu_percent": 80,
+    "storage_percent": 90,
+    "temperature_celsius": 50
+  }
+}
+```
+
+### `PUT /api/monitoring/thresholds`
+
+Update a single threshold. Valid keys: `cpu_percent` (1-100), `storage_percent` (1-100), `temperature_celsius` (1-150).
+
+```bash
+curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/monitoring/thresholds -d '{"key": "cpu_percent", "value": 85}'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "cpu_percent": 85,
+    "storage_percent": 90,
+    "temperature_celsius": 50
+  }
+}
+```
+
+Invalid key:
+
+```json
+{"success": false, "error": "Invalid key: bogus. Valid keys: cpu_percent, storage_percent, temperature_celsius"}
+```
+
+Value out of range:
+
+```json
+{"success": false, "error": "Value must be between 1 and 100"}
+```
+
+---
+
 ## Security
 
 ### `GET /api/security`

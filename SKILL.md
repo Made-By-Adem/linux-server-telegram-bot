@@ -106,6 +106,8 @@ Error responses use `success: false` with an `error` message.
 | `/api/sysinfo/temperature` | GET | CPU temperature | |
 | `/api/sysinfo/stress-test` | POST | CPU stress test (feature-flag gated) | query: `?minutes=1` |
 | `/api/sysinfo/fan` | POST | Set fan state (feature-flag gated) | query: `?state=0` (0=off/auto, 1=on) |
+| `/api/monitoring/thresholds` | GET | Get current monitoring thresholds | |
+| `/api/monitoring/thresholds` | PUT | Update a threshold | body: `{"key": "cpu_percent", "value": 85}` |
 | `/api/security` | GET | Full security overview | |
 | `/api/security/fail2ban` | GET | Fail2ban status | |
 | `/api/security/ufw` | GET | UFW status | |
@@ -153,7 +155,8 @@ The [`agent/`](agent/) directory contains a self-contained kit for AI agent inte
 - Remote access: Cloudflare Tunnel (recommended)
 
 ## Configuration
-- `config.yaml`: servers, compose stacks, scripts, thresholds, feature flags, API settings, log files, per-item failure policies
+- `config.yaml`: servers, compose stacks, scripts, thresholds (CPU/disk/temperature), feature flags, API settings, log files, per-item failure policies
+- Thresholds are configurable via Telegram bot (interactive menu), API (`PUT /api/monitoring/thresholds`), or direct config.yaml editing
 - `.env`: secrets (bot token, chat IDs, WoL settings, API key -- auto-generated on first run)
 - Services and containers are auto-detected; config entries are only needed to override the default failure policy
 - Hot-reloadable: edit config.yaml at runtime, changes are picked up via watchdog (0.5s debounce) or `/reload` command

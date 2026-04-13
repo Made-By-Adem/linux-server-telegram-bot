@@ -1,8 +1,5 @@
 """Tests for the shared logs action module."""
 
-import os
-import tempfile
-
 from linux_server_bot.config import config
 from linux_server_bot.shared.actions.logs import list_available_logs, read_log_tail
 

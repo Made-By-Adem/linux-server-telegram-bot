@@ -1,6 +1,14 @@
-"""Tests for config parsing -- MonitoredItem, backwards compat, policy lookup."""
+"""Tests for config parsing -- MonitoredItem, backwards compat, policy lookup, thresholds."""
 
-from linux_server_bot.config import MonitoredItem, MonitoringConfig, _parse_monitored_items
+import pytest
+
+from linux_server_bot.config import (
+    THRESHOLD_KEYS,
+    MonitoredItem,
+    MonitoringConfig,
+    _parse_monitored_items,
+    update_monitoring_threshold,
+)
 
 
 class TestMonitoredItem:
@@ -86,3 +94,42 @@ class TestMonitoringConfigPolicyLookup:
     def test_get_container_policy_default(self):
         mc = MonitoringConfig()
         assert mc.get_container_policy("unknown") == "notify"
+
+
+class TestUpdateMonitoringThreshold:
+    def test_invalid_key_raises(self):
+        with pytest.raises(ValueError, match="Invalid threshold key"):
+            update_monitoring_threshold("bogus_key", 50)
+
+    def test_value_below_range_raises(self):
+        with pytest.raises(ValueError, match="must be between"):
+            update_monitoring_threshold("cpu_percent", 0)
+
+    def test_value_above_range_raises(self):
+        with pytest.raises(ValueError, match="must be between"):
+            update_monitoring_threshold("cpu_percent", 101)
+
+    def test_valid_update_writes_config(self, tmp_path):
+        import yaml
+
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(yaml.dump({"monitoring": {"thresholds": {"cpu_percent": 80}}}))
+        update_monitoring_threshold("cpu_percent", 90, config_path=config_file)
+
+        reloaded = yaml.safe_load(config_file.read_text())
+        assert reloaded["monitoring"]["thresholds"]["cpu_percent"] == 90
+
+    def test_valid_update_creates_thresholds_section(self, tmp_path):
+        import yaml
+
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(yaml.dump({"monitoring": {}}))
+        update_monitoring_threshold("storage_percent", 85, config_path=config_file)
+
+        reloaded = yaml.safe_load(config_file.read_text())
+        assert reloaded["monitoring"]["thresholds"]["storage_percent"] == 85
+
+    def test_threshold_keys_have_valid_ranges(self):
+        for key, (lo, hi) in THRESHOLD_KEYS.items():
+            assert lo < hi, f"{key}: lo ({lo}) must be less than hi ({hi})"
+            assert lo >= 1, f"{key}: lo must be >= 1"
