@@ -40,9 +40,10 @@ _SETUP_STATE_FILE = ".setup_state.json"
 
 
 def atomic_write(path: str, content: str) -> None:
-    """Write *content* to *path* atomically via a temp file + rename.
+    """Write *content* to *path* safely.
 
-    If the process is interrupted mid-write the original file stays intact.
+    Tries atomic rename first (safest). Falls back to direct overwrite
+    when the file is a Docker bind mount (rename fails with EBUSY).
     """
     dir_name = os.path.dirname(os.path.abspath(path))
     fd, tmp_path = tempfile.mkstemp(dir=dir_name, prefix=".tmp_", suffix=".env")
@@ -50,8 +51,19 @@ def atomic_write(path: str, content: str) -> None:
         with os.fdopen(fd, "w") as f:
             f.write(content)
         os.replace(tmp_path, path)  # atomic on POSIX
+    except OSError as exc:
+        # Docker bind-mounted files can't be replaced (EBUSY).
+        # Fall back to direct write.
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        if exc.errno == 16:  # EBUSY
+            with open(path, "w") as f:
+                f.write(content)
+        else:
+            raise
     except BaseException:
-        # Clean up temp file on any failure (including KeyboardInterrupt)
         try:
             os.unlink(tmp_path)
         except OSError:
