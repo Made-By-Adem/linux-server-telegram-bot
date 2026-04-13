@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_BACKUPS, inline_action_keyboard
 from linux_server_bot.shared.actions.backups import (
     get_backup_size,
@@ -41,17 +41,17 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         chat_id = call.message.chat.id
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         if action == "trigger":
             script = config.scripts.backup
             if not script:
-                bot_inst.answer_callback_query(call.id, "Script not configured")
+                safe_answer_callback_query(bot_inst, call.id, "Script not configured")
                 bot_inst.send_message(chat_id, "Backup script not configured in config.yaml (scripts.backup).")
                 return
-            bot_inst.answer_callback_query(call.id, "Starting backup...")
+            safe_answer_callback_query(bot_inst, call.id, "Starting backup...")
             bot_inst.send_message(chat_id, "Starting backup (this may take a while)...")
             result = trigger_backup(script)
             output = result.get("output", "No output.")
@@ -63,7 +63,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "status":
-            bot_inst.answer_callback_query(call.id, "Checking status...")
+            safe_answer_callback_query(bot_inst, call.id, "Checking status...")
             result = get_backup_status()
             output = result.get("output", "No backup status available.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -71,7 +71,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "size":
-            bot_inst.answer_callback_query(call.id, "Checking size...")
+            safe_answer_callback_query(bot_inst, call.id, "Checking size...")
             result = get_backup_size()
             bot_inst.send_message(
                 chat_id,
@@ -80,7 +80,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             )
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("backups", _handle_callback)
 

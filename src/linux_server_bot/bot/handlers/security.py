@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_SECURITY, inline_action_keyboard
 from linux_server_bot.shared.actions.security import (
     get_available_updates,
@@ -43,12 +43,12 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     chat_id = call.message.chat.id
 
     if action == "cancel":
-        bot.answer_callback_query(call.id, "Cancelled")
+        safe_answer_callback_query(bot, call.id, "Cancelled")
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
         return
 
     if action == "fail2ban":
-        bot.answer_callback_query(call.id, "Checking fail2ban...")
+        safe_answer_callback_query(bot, call.id, "Checking fail2ban...")
         result = get_fail2ban_status()
         if result["available"]:
             text = "<b>Fail2ban Status:</b>\n" + escape_html(result["status"])
@@ -60,7 +60,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "ufw":
-        bot.answer_callback_query(call.id, "Checking UFW...")
+        safe_answer_callback_query(bot, call.id, "Checking UFW...")
         result = get_ufw_status()
         text = "<b>UFW Status:</b>\n" + escape_html(result["status"])
         for chunk_text in chunk_message(text):
@@ -68,7 +68,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "ssh":
-        bot.answer_callback_query(call.id, "Checking SSH sessions...")
+        safe_answer_callback_query(bot, call.id, "Checking SSH sessions...")
         result = get_ssh_sessions()
         text = "<b>Current sessions:</b>\n" + escape_html(result["current_sessions"])
         bot.send_message(chat_id, text, parse_mode="HTML")
@@ -78,7 +78,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "failed":
-        bot.answer_callback_query(call.id, "Checking failed logins...")
+        safe_answer_callback_query(bot, call.id, "Checking failed logins...")
         result = get_failed_logins()
         if result["found"]:
             text = "<b>Recent failed logins:</b>\n" + escape_html(result["output"])
@@ -89,7 +89,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "updates":
-        bot.answer_callback_query(call.id, "Checking updates...")
+        safe_answer_callback_query(bot, call.id, "Checking updates...")
         result = get_available_updates()
         if result["up_to_date"]:
             bot.send_message(chat_id, "System is up to date.")
@@ -99,7 +99,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
                 bot.send_message(chat_id, chunk_text, parse_mode="HTML")
         return
 
-    bot.answer_callback_query(call.id, "Unknown action")
+    safe_answer_callback_query(bot, call.id, "Unknown action")
 
 
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:

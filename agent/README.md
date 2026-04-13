@@ -75,10 +75,10 @@ AI Agent
          ▼
    shared/actions/ layer
          │
-         ├── Docker Socket    → Containers
-         ├── D-Bus Socket     → Systemd Services
-         ├── Shell Scripts    → Updates / Backups
-         └── System Commands  → Sysinfo / Security
+         ├── Docker Socket         → Containers
+         ├── nsenter + systemctl   → Systemd Services
+         ├── nsenter + shell       → Updates / Backups / Commands
+         └── netcat                → Server Pings
 ```
 
 Each server runs its own API instance. The agent authenticates with each server independently using its API key.

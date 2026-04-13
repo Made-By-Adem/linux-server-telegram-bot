@@ -140,7 +140,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             _view_log(bot_inst, chat_id, target)
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("logs", _handle_callback)
 

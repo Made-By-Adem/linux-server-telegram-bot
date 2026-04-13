@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from telebot.handler_backends import State, StatesGroup
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_FAN, BTN_STRESS, BTN_SYSINFO, inline_action_keyboard
 from linux_server_bot.config import THRESHOLD_KEYS, update_monitoring_threshold
 from linux_server_bot.shared.actions.sysinfo import get_sysinfo_text, run_stress_test, set_fan_state
@@ -76,12 +76,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         chat_id = call.message.chat.id
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         if action == "fan_off":
-            bot_inst.answer_callback_query(call.id, "Setting fans off...")
+            safe_answer_callback_query(bot_inst, call.id, "Setting fans off...")
             result = set_fan_state(0)
             icon = "\U0001f4a8" if result["success"] else "\u26a0\ufe0f"
             msg = "Fans state changed to 0: Off (automatic)." if result["success"] else f"Failed: {result['error']}"
@@ -89,7 +89,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "fan_on":
-            bot_inst.answer_callback_query(call.id, "Setting fans on...")
+            safe_answer_callback_query(bot_inst, call.id, "Setting fans on...")
             result = set_fan_state(1)
             icon = "\U0001f4a8" if result["success"] else "\u26a0\ufe0f"
             msg = "Fans state changed to 1: On." if result["success"] else f"Failed: {result['error']}"
@@ -97,14 +97,14 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "thresholds":
-            bot_inst.answer_callback_query(call.id)
+            safe_answer_callback_query(bot_inst, call.id)
             _send_thresholds(bot_inst, chat_id)
             return
 
         if action == "threshold_pick":
             key = parts[1] if len(parts) > 1 else None
             if key and key in THRESHOLD_KEYS:
-                bot_inst.answer_callback_query(call.id)
+                safe_answer_callback_query(bot_inst, call.id)
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 label, unit = _THRESHOLD_LABELS[key]
                 lo, hi = THRESHOLD_KEYS[key]
@@ -118,10 +118,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 with bot.retrieve_data(call.from_user.id, chat_id) as data:
                     data["threshold_key"] = key
             else:
-                bot_inst.answer_callback_query(call.id, "Unknown threshold")
+                safe_answer_callback_query(bot_inst, call.id, "Unknown threshold")
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("sysinfo", _handle_callback)
 

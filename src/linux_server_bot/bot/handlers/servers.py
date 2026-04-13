@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_SERVERS, inline_item_keyboard
 from linux_server_bot.shared.actions.servers import (
     load_server_states,
@@ -58,20 +58,20 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         chat_id = call.message.chat.id
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         if action == "ping" and target:
             for server in config.servers:
                 if server.name == target:
-                    bot_inst.answer_callback_query(call.id, f"Pinging {target}...")
+                    safe_answer_callback_query(bot_inst, call.id, f"Pinging {target}...")
                     _do_ping(chat_id, server.name, server.host, server.port)
                     return
-            bot_inst.answer_callback_query(call.id, f"Server '{target}' not found")
+            safe_answer_callback_query(bot_inst, call.id, f"Server '{target}' not found")
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("servers", _handle_callback)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_REBOOT, inline_confirm_keyboard
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.shell import run_command
@@ -28,7 +28,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         # "reboot:now:confirm" or "reboot:now:cancel"
         if action == "now" and len(parts) > 1:
             if parts[1] == "confirm":
-                bot_inst.answer_callback_query(call.id, "Rebooting...")
+                safe_answer_callback_query(bot_inst, call.id, "Rebooting...")
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 logger.info("User confirmed reboot")
                 bot_inst.send_message(chat_id, "Rebooting the server...")
@@ -37,12 +37,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                     bot_inst.send_message(chat_id, f"Reboot failed: {result.stderr}")
                 return
             if parts[1] == "cancel":
-                bot_inst.answer_callback_query(call.id, "Cancelled")
+                safe_answer_callback_query(bot_inst, call.id, "Cancelled")
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 bot_inst.send_message(chat_id, "Reboot canceled.")
                 return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("reboot", _handle_callback)
 

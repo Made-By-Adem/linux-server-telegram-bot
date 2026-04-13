@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_WOL, inline_confirm_keyboard
 from linux_server_bot.shared.actions.wol import wake_device
 from linux_server_bot.shared.auth import authorized
@@ -28,7 +28,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         # "wol:wake:confirm" or "wol:wake:cancel"
         if action == "wake" and len(parts) > 1:
             if parts[1] == "confirm":
-                bot_inst.answer_callback_query(call.id, "Sending WoL packet...")
+                safe_answer_callback_query(bot_inst, call.id, "Sending WoL packet...")
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 logger.info("User triggered WoL for %s", config.wol.hostname)
                 result = wake_device(config.wol.address, config.wol.interface)
@@ -38,12 +38,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                     bot_inst.send_message(chat_id, f"\u26a0\ufe0f WoL failed: {result['error']}")
                 return
             if parts[1] == "cancel":
-                bot_inst.answer_callback_query(call.id, "Cancelled")
+                safe_answer_callback_query(bot_inst, call.id, "Cancelled")
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 bot_inst.send_message(chat_id, "Wake up canceled.")
                 return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("wol", _handle_callback)
 

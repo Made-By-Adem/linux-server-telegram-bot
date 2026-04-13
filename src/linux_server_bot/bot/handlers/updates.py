@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_UPDATES, inline_action_keyboard
 from linux_server_bot.shared.actions.updates import (
     dry_run_updates,
@@ -45,18 +45,18 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         chat_id = call.message.chat.id
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         script = _check_script()
         if not script:
-            bot_inst.answer_callback_query(call.id, "Script not configured")
+            safe_answer_callback_query(bot_inst, call.id, "Script not configured")
             bot_inst.send_message(chat_id, "Update script not configured in config.yaml (scripts.update_containers).")
             return
 
         if action == "dry_run":
-            bot_inst.answer_callback_query(call.id, "Running dry-run...")
+            safe_answer_callback_query(bot_inst, call.id, "Running dry-run...")
             result = dry_run_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -64,7 +64,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "run":
-            bot_inst.answer_callback_query(call.id, "Starting updates...")
+            safe_answer_callback_query(bot_inst, call.id, "Starting updates...")
             bot_inst.send_message(chat_id, "Starting container updates (this may take a while)...")
             result = trigger_updates(script)
             output = result.get("output", "No output.")
@@ -76,14 +76,14 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "rollback":
-            bot_inst.answer_callback_query(call.id, "Rolling back...")
+            safe_answer_callback_query(bot_inst, call.id, "Rolling back...")
             result = rollback_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
                 bot_inst.send_message(chat_id, chunk_text)
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("updates", _handle_callback)
 

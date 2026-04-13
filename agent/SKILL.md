@@ -63,10 +63,23 @@ All endpoints return JSON with a `success` boolean:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/services/status` | All service statuses |
+| GET | `/api/services/status` | All configured service statuses |
+| GET | `/api/services/list` | List configured services with policies |
+| POST | `/api/services/add` | Add service (body: `{"name": "nginx", "on_failure": "notify"}`) |
+| DELETE | `/api/services/{name}` | Remove service from monitoring |
+| PUT | `/api/services/{name}/policy` | Update policy (body: `{"name": "...", "on_failure": "notify_restart"}`) |
 | POST | `/api/services/start/{name}` | Start service |
 | POST | `/api/services/stop/{name}` | Stop service |
 | POST | `/api/services/restart/{name}` | Restart service |
+
+### Monitored Containers (CRUD)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/containers/list` | List configured containers with policies |
+| POST | `/api/containers/add` | Add container (body: `{"name": "redis", "on_failure": "notify"}`) |
+| DELETE | `/api/containers/{name}` | Remove container from monitoring |
+| PUT | `/api/containers/{name}/policy` | Update policy |
 
 ### Log Files
 
@@ -156,7 +169,7 @@ All endpoints return JSON with a `success` boolean:
 
 ## Important Notes
 
-- **Container names** come from Docker directly (auto-detected); **service names** from systemd enabled services (auto-detected)
+- **Container and service names** are explicitly configured in config.yaml -- only configured items are monitored. Use the CRUD endpoints to add/remove items at runtime.
 - **Updates and backups** require external scripts to be installed (from [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts))
 - **Reboot** requires explicit `{"confirm": true}` -- will not execute without it
 - **Command execution** runs with server-level privileges -- use with caution
