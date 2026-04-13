@@ -42,8 +42,8 @@ Three services share one `config.yaml` (hot-reloadable) and a common
 
 ### Automated Monitoring
 
-- Container health + auto-restart
-- Service health + auto-restart
+- Container health monitoring (auto-detected from Docker, configurable policy per container: notify / notify+restart / ignore)
+- Service health monitoring (auto-detected from systemd enabled services, same configurable policy)
 - Server/website reachability with retry and state tracking
 - CPU usage with double-verification + top process report
 - Temperature monitoring with fan state
@@ -149,9 +149,11 @@ The [`agent/`](agent/) directory contains a self-contained kit for AI agent inte
 - Remote access: Cloudflare Tunnel (recommended)
 
 ## Configuration
-- `config.yaml`: servers, containers, stacks, services, scripts, thresholds, feature flags, API settings, log files
-- `.env`: secrets (bot token, chat IDs, WoL settings, API key)
+- `config.yaml`: servers, compose stacks, scripts, thresholds, feature flags, API settings, log files, per-item failure policies
+- `.env`: secrets (bot token, chat IDs, WoL settings, API key -- auto-generated on first run)
+- Services and containers are auto-detected; config entries are only needed to override the default failure policy
 - Hot-reloadable: edit config.yaml at runtime, changes are picked up via watchdog (0.5s debounce) or `/reload` command
+- First-run setup wizard with resume support for interactive .env configuration
 
 ## Integration Points
 - Docker Engine API via socket mount (`/var/run/docker.sock`)
@@ -160,6 +162,9 @@ The [`agent/`](agent/) directory contains a self-contained kit for AI agent inte
 - Log files via configurable paths (supports files, directories, and glob patterns)
 - Server pings via netcat
 
-## Deployment
+## Startup & Deployment
+- First-run setup wizard (interactive .env creation, bot token validation, auto-generated API key)
+- Preflight checks: bot token validation via Telegram API, Docker socket access, config file presence
+- Graceful shutdown: SIGINT/SIGTERM handled cleanly without stack traces
 - Docker Compose (recommended): bot, monitoring, and API as three services
 - Native Python: `pip install -e .` with three entry points (`linux-bot`, `linux-monitor`, `linux-api`)

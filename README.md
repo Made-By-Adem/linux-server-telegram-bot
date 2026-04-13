@@ -11,7 +11,7 @@ Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux se
 
 - **Manage Docker** -- start, stop, restart containers and Compose stacks from Telegram
 - **Manage services** -- control systemd services (nginx, docker, ufw, etc.)
-- **Get automatic alerts** -- the bot watches your server in the background and notifies you when a container crashes, a service goes down, CPU spikes, disk fills up, or someone tries to brute-force SSH. Crashed containers and services are automatically restarted.
+- **Get automatic alerts** -- the bot watches your server in the background and notifies you when a container crashes, a service goes down, CPU spikes, disk fills up, or someone tries to brute-force SSH. You choose per service and container what should happen: just notify, notify and auto-restart, or ignore.
 - **Check security** -- view Fail2ban bans, UFW rules, SSH sessions, failed logins, and available updates
 - **View system info** -- CPU, memory, disk, temperature, uptime
 - **Browse logs** -- read rkhunter scans, auth.log, fail2ban, syslog, and more directly in Telegram
@@ -39,14 +39,14 @@ Open the menu with `/menu` or a bot command and manage your server on-demand: st
 
 ### 📡 Background Monitoring
 
-The bot continuously watches your server and sends you a message when something needs attention. Crashed containers and services are automatically restarted.
+The bot continuously watches your server and sends you a message when something needs attention. New containers and services are **auto-detected** -- no manual configuration needed.
 
 **What it monitors:**
 
 | Check | What happens |
 |-------|-------------|
-| Docker containers | Alert + auto-restart if a container stops |
-| Systemd services | Alert + auto-restart if a service fails |
+| Docker containers | Auto-detected, configurable per container: notify, notify + restart, or ignore |
+| Systemd services | Auto-detected (all enabled services), same configurable policy |
 | Server/website ping | Alert when a server goes offline or comes back online |
 | CPU usage | Alert when CPU exceeds threshold (double-verified, shows top processes) |
 | Temperature | Alert when temperature exceeds threshold (reports fan state) |
@@ -54,7 +54,7 @@ The bot continuously watches your server and sends you a message when something 
 | SSH failed logins | Alert on brute force attempts (>10 failures) |
 | Fail2ban bans | Alert when an IP gets banned |
 
-Monitoring interval, thresholds, and which containers/services/servers to watch are all configurable in `config.yaml`.
+Containers and services are auto-detected at each monitoring cycle. Failure policies can be changed per item via the Telegram bot menu or in `config.yaml`. Monitoring interval, thresholds, and servers to ping are configurable in `config.yaml`.
 
 ### 🌐 HTTP API (Optional)
 
@@ -131,12 +131,14 @@ pip install -e .
 
 cp .env.example .env
 cp config.example.yaml config.yaml
-# Edit .env with your bot token and chat ID (see above)
 
 linux-bot        # Start the interactive bot
 linux-monitor    # Start background monitoring (in another terminal)
 linux-api        # Start the HTTP API (optional, in another terminal)
 ```
+
+> [!TIP]
+> On first run, the bot launches an interactive **setup wizard** that walks you through configuring your bot token, chat ID, and optional settings. An API key is generated automatically. If the setup is interrupted, it resumes where you left off next time.
 
 ### 3. Start chatting
 
@@ -194,14 +196,14 @@ All settings are in `config.yaml` with `${VAR}` syntax for environment variable 
 | Section | What to configure | Default |
 |---------|-------------------|---------|
 | `features` | Toggle features on/off (hides menu buttons) | All enabled |
-| `services` | Systemd services manageable via bot | docker, ufw, nginx |
-| `containers` | Docker containers shown in bot menus | portainer, nginx |
+| `services` | Extra services for bot menu (auto-detected by default) | -- |
+| `containers` | Extra containers for bot menu (auto-detected by default) | -- |
 | `compose_stacks` | Docker Compose stacks with name and path | Example stack |
 | `servers` | Servers to ping (name, host, port) | Example server |
 | `logfiles` | Log file paths, directories, or glob patterns | Security + system logs |
 | `scripts` | Paths to update-containers and backup scripts | /opt/scripts/ |
 | `api` | API enabled/port/key for HTTP API | Enabled on port 8120 |
-| `monitoring` | Interval, targets, thresholds | 5 min interval |
+| `monitoring` | Interval, thresholds, per-item failure policies | 5 min, auto-detect |
 
 **Hot-reload**: Edit `config.yaml` while the bot is running -- changes are picked up automatically. Use `/reload` in Telegram to trigger a manual reload.
 
@@ -256,8 +258,8 @@ api:
 
 | Feature | Interactive (menu) | Automatic (monitoring) | API (optional) |
 |---------|-------------------|----------------------|----------------|
-| Docker containers | Start, stop, restart, status | Health check + auto-restart | All actions via HTTP |
-| Systemd services | Start, stop, restart, status | Health check + auto-restart | All actions via HTTP |
+| Docker containers | Start, stop, restart, status, policy | Auto-detected, configurable policy | All actions via HTTP |
+| Systemd services | Start, stop, restart, status, policy | Auto-detected, configurable policy | All actions via HTTP |
 | Compose stacks | Up, down, restart, pull, logs | -- | All actions via HTTP |
 | System info | On-demand overview | CPU, temp & disk alerts | On-demand via HTTP |
 | Security | Full overview on request | Brute force & ban alerts | Full overview via HTTP |
@@ -389,6 +391,7 @@ src/linux_server_bot/
         auth.py            # API key authentication
         routes.py          # All REST endpoints
     shared/
+        startup.py         # Setup wizard, preflight checks, graceful shutdown
         shell.py           # Safe subprocess wrappers
         auth.py            # Authorization decorator
         telegram.py        # Messaging helpers
@@ -496,8 +499,10 @@ docker compose restart bot
 # Check monitoring logs
 docker compose logs monitor
 
-# Verify monitoring section in config.yaml
-# Ensure containers/services/servers are listed under monitoring
+# Services and containers are auto-detected.
+# Check if the failure policy is not set to 'ignore':
+# Look in config.yaml under monitoring.services / monitoring.containers
+# or check via the Policy button in the Telegram bot menu.
 ```
 
 **API returning 403 Forbidden**

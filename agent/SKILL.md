@@ -140,7 +140,7 @@ All endpoints return JSON with a `success` boolean:
 
 ## Important Notes
 
-- **Container/service names** must match what's configured in the server's `config.yaml`
+- **Container names** come from Docker directly (auto-detected); **service names** from systemd enabled services (auto-detected)
 - **Updates and backups** require external scripts to be installed (from [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts))
 - **Reboot** requires explicit `{"confirm": true}` -- will not execute without it
 - **Command execution** runs with server-level privileges -- use with caution

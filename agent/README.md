@@ -100,7 +100,7 @@ You can use `/openapi.json` to auto-generate tool definitions for your agent fra
 
 ## Security Considerations
 
-- **API keys** should be strong and unique per server
+- **API keys** are auto-generated on first startup (check `.env` on the server); should be unique per server
 - **Cloudflare Tunnel** is recommended over opening ports -- no firewall changes needed
 - **The `/api/command` endpoint** executes arbitrary shell commands -- restrict access carefully
 - **The `/api/reboot` endpoint** requires explicit `{"confirm": true}` as a safeguard
