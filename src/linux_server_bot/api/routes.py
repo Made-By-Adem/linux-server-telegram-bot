@@ -81,7 +81,8 @@ async def docker_cleanup():
 
 @router.get("/services/status")
 async def services_status():
-    statuses = services.get_service_statuses(config.services)
+    all_services = services.get_enabled_service_names() or config.services
+    statuses = services.get_service_statuses(all_services)
     return {"success": True, "data": [asdict(s) for s in statuses]}
 
 

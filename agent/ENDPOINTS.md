@@ -1,8 +1,8 @@
 # API Endpoint Reference
 
-Complete request/response reference for every endpoint. Base URL: `http://localhost:8120` (or your Cloudflare Tunnel hostname).
+Complete request/response reference for every endpoint. Base URL: `http://localhost:<port>` (default 8120, auto-detected if busy) or your Cloudflare Tunnel hostname.
 
-Authentication: `X-API-Key: <key>` header on all endpoints except `/api/health`.
+Authentication: `X-API-Key: <key>` header on all endpoints except `/api/health`. The API key is auto-generated on first startup (check `.env` on the server).
 
 ---
 

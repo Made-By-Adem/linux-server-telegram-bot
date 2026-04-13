@@ -1,10 +1,10 @@
 # Linux Server Management API
 
-You manage Linux servers via a REST API. Each server runs the Linux Server Bot API on a local port (default 8120), optionally exposed via Cloudflare Tunnel.
+You manage Linux servers via a REST API. Each server runs the Linux Server Bot API (port auto-detected on startup, default 8120), optionally exposed via Cloudflare Tunnel.
 
 ## Authentication
 
-Every request (except health check) requires the `X-API-Key` header.
+Every request (except health check) requires the `X-API-Key` header. The API key is auto-generated on first startup (check `.env` on the server).
 
 ```
 X-API-Key: <api-key>
@@ -14,7 +14,7 @@ X-API-Key: <api-key>
 
 ```
 https://<server-hostname>/api   # via Cloudflare Tunnel
-http://localhost:8120/api       # local
+http://localhost:<port>/api     # local (default 8120, auto-detected if busy)
 ```
 
 ## Response Format

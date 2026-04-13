@@ -9,6 +9,7 @@ This directory contains everything an AI agent needs to manage Linux servers via
 | File | Purpose |
 |------|---------|
 | `SKILL.md` | API skill definition -- load this as a system prompt or tool description for your agent |
+| `ENDPOINTS.md` | Complete endpoint reference with request/response JSON schemas |
 | `workflows.md` | Step-by-step workflows with curl examples for common server management tasks |
 | `.env.example` | Environment variables template for multi-server configuration |
 
