@@ -76,12 +76,16 @@ def _view_log(bot, chat_id: int, log_path: str) -> None:
             continue
 
         try:
-            with open(log_file, "r") as f:
+            with open(log_file, "r", errors="replace") as f:
                 lines = f.readlines()
                 tail = "".join(lines[-20:])
                 if tail.strip():
-                    bot.send_message(chat_id, f"Last 20 lines of {os.path.basename(log_file)}:")
-                    bot.send_message(chat_id, tail, parse_mode=None)
+                    from linux_server_bot.shared.telegram import chunk_message, escape_html
+
+                    header = f"<b>Last 20 lines of {escape_html(os.path.basename(log_file))}:</b>\n"
+                    escaped_tail = escape_html(tail)
+                    for chunk in chunk_message(header + escaped_tail):
+                        bot.send_message(chat_id, chunk, parse_mode="HTML")
         except Exception:
             logger.exception("Failed to read log tail: %s", log_file)
             bot.send_message(chat_id, f"Failed to read {log_file}")
@@ -117,17 +121,19 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         bot.send_message(chat_id, msg, reply_markup=markup)
 
     def _handle_callback(bot_inst, call, parts: list[str]) -> None:
+        from linux_server_bot.bot.callbacks import safe_answer_callback_query
+
         action = parts[0] if parts else None
         target = ":".join(parts[1:]) if len(parts) > 1 else None
         chat_id = call.message.chat.id
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         if action == "view" and target:
-            bot_inst.answer_callback_query(call.id, f"Loading {target}...")
+            safe_answer_callback_query(bot_inst, call.id, f"Loading {os.path.basename(target)}...")
             logger.info("User requested log: %s", target)
             _view_log(bot_inst, chat_id, target)
             return
