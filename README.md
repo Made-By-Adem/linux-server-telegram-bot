@@ -1,6 +1,15 @@
 # Linux Server Bot
 
-Manage and monitor your Linux server from your phone via Telegram. Start, stop and restart Docker containers and services, check security logs, view system resources, trigger backups -- all without opening an SSH session.
+Telegram bot + REST API for managing and monitoring Linux servers. Control Docker containers, Compose stacks, and systemd services, get automatic health alerts, check security, view logs, and trigger backups -- all from Telegram or via API.
+
+The API makes this bot a natural fit for **AI agents**: give your agent the [skill file](agent/SKILL.md) and it can manage your servers autonomously -- restart crashed containers, run security audits, trigger updates, and more. See the [`agent/`](agent/) directory for a ready-to-use integration kit with workflows and endpoint documentation.
+
+```
+Telegram Chat ──── Bot ──────┐
+                             ├──> shared/actions/ ──> Docker / systemd / shell
+AI Agent ─────── REST API ───┘
+                               ▲ single config.yaml (hot-reloadable)
+```
 
 Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux server.
 
@@ -9,21 +18,22 @@ Tested on Ubuntu 22.04/22.10 and Raspberry Pi 5, but should work on any Linux se
 
 ### What can you do with it?
 
-- **Manage Docker** -- start, stop, restart containers and Compose stacks from Telegram
+- **Manage Docker** -- start, stop, restart containers and Compose stacks
 - **Manage services** -- control systemd services (nginx, docker, ufw, etc.)
-- **Get automatic alerts** -- the bot watches your server in the background and notifies you when a container crashes, a service goes down, CPU spikes, disk fills up, or someone tries to brute-force SSH. You choose per service and container what should happen: just notify, notify and auto-restart, or ignore.
-- **Check security** -- view Fail2ban bans, UFW rules, SSH sessions, failed logins, and available updates
+- **Get automatic alerts** -- monitors containers, services, CPU, disk, temperature, SSH brute-force, and Fail2ban. Configurable per item: notify, notify + auto-restart, or ignore.
+- **Check security** -- Fail2ban bans, UFW rules, SSH sessions, failed logins, available updates
 - **View system info** -- CPU, memory, disk, temperature, uptime
-- **Browse logs** -- read rkhunter scans, auth.log, fail2ban, syslog, and more directly in Telegram
-- **Trigger updates & backups** -- run your update and backup scripts with dry-run and rollback support
+- **Browse logs** -- auth.log, fail2ban, syslog, rkhunter, and more
+- **Trigger updates & backups** -- with dry-run preview and rollback support
 - **Ping servers** -- check if your other servers and websites are reachable
-- **Execute commands** -- run any shell command from Telegram when you need it
+- **Execute commands** -- run any shell command when you need it
 - **Wake-on-LAN** -- wake devices on the same network
+- **REST API** -- every feature above is also available as an HTTP endpoint with Swagger docs, designed for dashboards, automation, and AI agent integration
 
-Everything happens in **one Telegram chat** -- the bot sends you alerts automatically, and you use the interactive menu to manage your server whenever you need to.
+Everything works from **one Telegram chat** (alerts + interactive menu), and optionally via the **HTTP API** for programmatic access.
 
 > [!NOTE]
-> Most users only need the Telegram bot. The **HTTP API** is an optional extra for advanced use cases like multi-server dashboards, automation, or AI agent integration. When enabled, it runs on localhost and can be securely exposed over HTTPS via [Cloudflare Tunnel](#-cloudflare-tunnel-setup-optional).
+> Most users only need the Telegram bot. The **HTTP API** is an optional extra for multi-server dashboards, automation, or AI agent integration. When enabled, it runs on localhost and can be securely exposed via [Cloudflare Tunnel](#-cloudflare-tunnel-setup-optional).
 
 ---
 
