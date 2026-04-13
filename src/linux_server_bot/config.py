@@ -196,7 +196,19 @@ class AppConfig:
         telegram = data.get("telegram", {})
         self.bot_token = telegram.get("bot_token", os.environ.get("SECRET_TOKEN", self.bot_token))
         raw_users = telegram.get("allowed_users", [])
-        self.allowed_users = [int(u) for u in raw_users if u]
+        parsed_users: list[int] = []
+        for u in raw_users:
+            if not u:
+                continue
+            try:
+                parsed_users.append(int(u))
+            except (ValueError, TypeError):
+                logger.error(
+                    "Invalid chat ID '%s' in allowed_users -- must be a number. "
+                    "Check your .env file: CHAT_ID_PERSON1 should contain only digits.",
+                    u,
+                )
+        self.allowed_users = parsed_users
 
         wol = data.get("wol", {})
         self.wol = WolConfig(
