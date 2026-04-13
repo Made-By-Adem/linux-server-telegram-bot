@@ -121,8 +121,8 @@ Before you begin, you need two things from Telegram:
 #### Docker (Recommended)
 
 ```bash
-git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
-cd Linux-server-Telegram-bot
+git clone https://github.com/MadeByAdem/linux-server-telegram-bot
+cd linux-server-telegram-bot
 
 # Copy example configs
 cp .env.example .env
@@ -151,8 +151,8 @@ docker compose up -d
 #### Native Python (Alternative)
 
 ```bash
-git clone https://github.com/MadeByAdem/Linux-server-Telegram-bot
-cd Linux-server-Telegram-bot
+git clone https://github.com/MadeByAdem/linux-server-telegram-bot
+cd linux-server-telegram-bot
 pip install -e .
 
 cp .env.example .env
@@ -248,7 +248,7 @@ cd linux-server-management-scripts/server-baseline
 sudo bash install-script.sh --fresh-install
 
 # 2. Deploy the Telegram bot
-cd ~/Linux-server-Telegram-bot
+cd ~/linux-server-telegram-bot
 cp .env.example .env && cp config.example.yaml config.yaml
 # Edit .env and config.yaml with your settings
 docker compose up -d
