@@ -15,9 +15,7 @@ services:
     restart: unless-stopped
     network_mode: host
     pid: host
-    cap_add:
-      - SYS_PTRACE
-      - SYS_ADMIN
+    privileged: true
     healthcheck:
       test: ["CMD", "python", "-c", "import os, time; assert time.time() - os.path.getmtime('/tmp/bot_healthy') < 300"]
       interval: 60s
@@ -38,9 +36,7 @@ services:
       - /var/log:/var/log:ro
     restart: unless-stopped
     pid: host
-    cap_add:
-      - SYS_PTRACE
-      - SYS_ADMIN
+    privileged: true
     healthcheck:
       test: ["CMD", "python", "-c", "import os, time; assert time.time() - os.path.getmtime('/tmp/monitor_healthy') < 600"]
       interval: 60s
@@ -63,9 +59,7 @@ services:
     restart: unless-stopped
     network_mode: host
     pid: host
-    cap_add:
-      - SYS_PTRACE
-      - SYS_ADMIN
+    privileged: true
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8120/api/health"]
       interval: 30s
