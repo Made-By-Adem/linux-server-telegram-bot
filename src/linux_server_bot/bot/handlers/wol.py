@@ -58,7 +58,6 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             reply_markup=markup,
             parse_mode="HTML",
         )
-        show_menu(message)
 
     @bot.message_handler(commands=["wakewol"])
     @authorized(config)

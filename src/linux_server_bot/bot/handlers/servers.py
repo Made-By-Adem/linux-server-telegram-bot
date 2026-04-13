@@ -79,10 +79,8 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_servers_menu(message):
         _send_servers_menu(message.chat.id)
-        show_menu(message)
 
     @bot.message_handler(commands=["ping"])
     @authorized(config)
     def handle_ping_command(message):
         _send_servers_menu(message.chat.id)
-        show_menu(message)

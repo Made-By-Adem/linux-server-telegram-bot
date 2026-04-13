@@ -88,10 +88,8 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_backups_menu(message):
         _send_backups_menu(message.chat.id)
-        show_menu(message)
 
     @bot.message_handler(commands=["backups"])
     @authorized(config)
     def handle_backups_command(message):
         _send_backups_menu(message.chat.id)
-        show_menu(message)

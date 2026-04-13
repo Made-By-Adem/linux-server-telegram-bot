@@ -51,7 +51,6 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     def handle_reboot_menu(message):
         markup = inline_confirm_keyboard("reboot", "now")
         bot.send_message(message.chat.id, "Are you sure you want to reboot the server?", reply_markup=markup)
-        show_menu(message)
 
     @bot.message_handler(commands=["reboot"])
     @authorized(config)

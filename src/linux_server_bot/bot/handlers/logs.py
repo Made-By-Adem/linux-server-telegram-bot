@@ -140,10 +140,8 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_logs_menu(message):
         _send_logs_menu(message.chat.id)
-        show_menu(message)
 
     @bot.message_handler(commands=["logs"])
     @authorized(config)
     def handle_logs_command(message):
         _send_logs_menu(message.chat.id)
-        show_menu(message)

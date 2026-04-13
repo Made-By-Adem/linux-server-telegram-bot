@@ -203,11 +203,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     def handle_services_menu(message):
         _send_status(bot, message.chat.id, config.get_service_names())
         _send_services_menu(bot, message.chat.id)
-        show_menu(message)
 
     @bot.message_handler(commands=["services"])
     @authorized(config)
     def handle_services_command(message):
         _send_status(bot, message.chat.id, config.get_service_names())
         _send_services_menu(bot, message.chat.id)
-        show_menu(message)
