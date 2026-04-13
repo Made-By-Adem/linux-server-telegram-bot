@@ -8,43 +8,113 @@ from linux_server_bot.shared.shell import run_command, run_shell
 
 logger = logging.getLogger(__name__)
 
-_SYSINFO_SCRIPT = """
-echo "CPU Usage:"
-top -b -n 1 | awk '/^%Cpu/ {print "Usage: " 100 - $8 "%"}'
+_SYSINFO_SCRIPT = r"""
+# CPU
+cpu=$(top -b -n 1 | awk '/^%Cpu/ {printf "%.1f", 100 - $8}')
+echo "CPU|${cpu}%"
 
-echo "\\nMemory Usage:"
-free -m | awk '/^Mem/ {print "Total: " $2 "MB\\tUsed: " $3 "MB\\tFree: " $4 "MB\\tCache: " $6 "MB"}'
+# Memory
+free -m | awk '/^Mem/ {printf "MEM|%dMB|%dMB|%dMB|%dMB\n", $2, $3, $4, $6}'
 
-echo "\\nDisk Usage (Total, Used, Free):"
-df -h 2>/dev/null | grep /dev/ | awk '{print "Total: " $2 "\\tUsed: " $3 " (" $5 ") \\tFree: " $4}'
+# Disk
+df -h 2>/dev/null | grep /dev/ | awk '{printf "DISK|%s|%s|%s|%s|%s\n", $6, $2, $3, $4, $5}'
 
-echo "\\nCurrent Temperature:"
-cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | awk '{print "Temperature: " $1/1000 "°C"}' || echo "N/A"
+# Temperature
+temp=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null)
+if [ -n "$temp" ]; then echo "TEMP|$(echo "$temp" | awk '{printf "%.1f", $1/1000}')"; else echo "TEMP|N/A"; fi
 
-echo "\\nCurrent Fan state:"
-cat /sys/class/thermal/cooling_device0/cur_state 2>/dev/null | awk '{print "Fan state: " $1}' || echo "N/A"
+# Fan
+fan=$(cat /sys/class/thermal/cooling_device0/cur_state 2>/dev/null)
+if [ -n "$fan" ]; then echo "FAN|${fan}"; else echo "FAN|N/A"; fi
 
-echo "\\nAvailable Updates:"
+# Updates
 if command -v apt &> /dev/null; then
-  sudo apt list --upgradable 2>/dev/null | grep -c '/'
-elif command -v yum &> /dev/null; then
-  sudo yum list updates 2>/dev/null | grep -c '\\.'
+  count=$(apt list --upgradable 2>/dev/null | grep -c '/' || true)
+  echo "UPD|${count}"
 else
-  echo "Unsupported package manager"
+  echo "UPD|N/A"
 fi
 
-echo "\\nSystem Uptime:"
-uptime
+# Uptime
+echo "UP|$(uptime -p 2>/dev/null || uptime)"
+
+# Hostname
+echo "HOST|$(hostname)"
 """
 
 
 def get_sysinfo_text() -> str:
-    """Get full system info as formatted text."""
+    """Get full system info as structured, formatted text."""
     result = run_shell(_SYSINFO_SCRIPT, timeout=30)
-    output = result.stdout or result.stderr
-    if output.strip():
-        return "\n".join(line for line in output.split("\n") if "/usr/bin/apt" not in line)
-    return ""
+    if not result.stdout.strip():
+        return result.stderr or "Could not retrieve system info."
+
+    lines = {}
+    for line in result.stdout.strip().split("\n"):
+        if "|" in line:
+            parts = line.split("|", 1)
+            key = parts[0].strip()
+            val = parts[1].strip() if len(parts) > 1 else ""
+            if key == "DISK":
+                lines.setdefault("DISK", []).append(val)
+            else:
+                lines[key] = val
+
+    out = []
+
+    # Header
+    hostname = lines.get("HOST", "Server")
+    out.append(f"\U0001f5a5 {hostname}")
+    out.append("")
+
+    # CPU
+    cpu = lines.get("CPU", "N/A")
+    out.append(f"\U0001f4c8 CPU: {cpu}")
+
+    # Memory
+    mem = lines.get("MEM", "")
+    if mem:
+        parts = mem.split("|")
+        if len(parts) == 4:
+            out.append(f"\U0001f9e0 Memory: {parts[1]} / {parts[0]} used ({parts[3]} cache)")
+
+    # Temperature
+    temp = lines.get("TEMP", "N/A")
+    if temp != "N/A":
+        out.append(f"\U0001f321 Temperature: {temp}\u00b0C")
+
+    # Fan
+    fan = lines.get("FAN", "N/A")
+    if fan != "N/A":
+        fan_label = "off (auto)" if fan == "0" else "on"
+        out.append(f"\U0001f4a8 Fan: {fan_label}")
+
+    out.append("")
+
+    # Disk
+    disks = lines.get("DISK", [])
+    if disks:
+        out.append("\U0001f4be Disk:")
+        for d in disks:
+            parts = d.split("|")
+            if len(parts) == 5:
+                mount, total, used, free, pct = parts
+                out.append(f"  {mount}: {used}/{total} ({pct}) \u2014 {free} free")
+
+    out.append("")
+
+    # Updates
+    upd = lines.get("UPD", "N/A")
+    if upd != "N/A":
+        upd_icon = "\u2705" if upd == "0" else "\U0001f4e6"
+        upd_text = "up to date" if upd == "0" else f"{upd} available"
+        out.append(f"{upd_icon} Updates: {upd_text}")
+
+    # Uptime
+    uptime_str = lines.get("UP", "N/A")
+    out.append(f"\u23f1 Uptime: {uptime_str}")
+
+    return "\n".join(out)
 
 
 def get_cpu_usage() -> dict:

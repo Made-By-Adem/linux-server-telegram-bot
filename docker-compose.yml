@@ -14,6 +14,8 @@ services:
       - /var/log:/var/log:ro
     restart: unless-stopped
     network_mode: host
+    # pid:host + privileged required for nsenter to access host
+    # systemctl, ufw, fail2ban-client, journalctl, and custom commands.
     pid: host
     privileged: true
     healthcheck:

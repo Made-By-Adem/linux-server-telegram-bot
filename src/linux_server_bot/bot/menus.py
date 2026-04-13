@@ -64,8 +64,12 @@ def build_main_menu(config: AppConfig) -> types.ReplyKeyboardMarkup:
     markup = types.ReplyKeyboardMarkup(row_width=3, resize_keyboard=True)
     buttons = []
     for feature_name, label in _FEATURE_BUTTONS:
-        if getattr(config.features, feature_name, True):
-            buttons.append(types.KeyboardButton(label))
+        if not getattr(config.features, feature_name, True):
+            continue
+        # Hide WoL if no MAC address is configured
+        if feature_name == "wol" and not config.wol.address:
+            continue
+        buttons.append(types.KeyboardButton(label))
     if buttons:
         markup.add(*buttons)
     return markup

@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import os
 import re
 from glob import glob
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_LOGS, inline_item_keyboard
 from linux_server_bot.shared.auth import authorized
+from linux_server_bot.shared.telegram import chunk_message, escape_html
 
 if TYPE_CHECKING:
     import telebot
@@ -67,9 +69,13 @@ def _view_log(bot, chat_id: int, log_path: str) -> None:
             bot.send_message(chat_id, f"Failed to read {log_file}")
             continue
 
+        # Send as .txt so it's easy to open on mobile
+        txt_name = os.path.splitext(os.path.basename(log_file))[0] + ".txt"
         try:
             with open(log_file, "rb") as f:
-                bot.send_document(chat_id, f)
+                buf = io.BytesIO(f.read())
+                buf.name = txt_name
+                bot.send_document(chat_id, buf)
         except Exception:
             logger.exception("Failed to send log file: %s", log_file)
             bot.send_message(chat_id, f"Failed to send {log_file}")
@@ -80,8 +86,6 @@ def _view_log(bot, chat_id: int, log_path: str) -> None:
                 lines = f.readlines()
                 tail = "".join(lines[-20:])
                 if tail.strip():
-                    from linux_server_bot.shared.telegram import chunk_message, escape_html
-
                     header = f"<b>Last 20 lines of {escape_html(os.path.basename(log_file))}:</b>\n"
                     escaped_tail = escape_html(tail)
                     for chunk in chunk_message(header + escaped_tail):
@@ -121,8 +125,6 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         bot.send_message(chat_id, msg, reply_markup=markup)
 
     def _handle_callback(bot_inst, call, parts: list[str]) -> None:
-        from linux_server_bot.bot.callbacks import safe_answer_callback_query
-
         action = parts[0] if parts else None
         target = ":".join(parts[1:]) if len(parts) > 1 else None
         chat_id = call.message.chat.id

@@ -86,12 +86,15 @@ Under the hood, the bot runs as two processes (interactive + monitoring) that sh
 Telegram Chat
   ├── Interactive menu  ──┐
   └── Monitoring alerts ──┤──> shared/actions/ ──> Docker Socket ──> Containers
-                          │                    ──> D-Bus Socket  ──> Systemd Services
-  HTTP API (optional)  ───┘                    ──> Shell Scripts ──> Updates / Backups
-                                               ──> netcat        ──> Server Pings
+                          │                    ──> nsenter + systemctl ──> Services
+  HTTP API (optional)  ───┘                    ──> nsenter + shell     ──> Host Commands
+                                               ──> netcat              ──> Server Pings
 ```
 
 All processes share a single `config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
+
+> [!NOTE]
+> **Docker host access**: When running in Docker, the containers use `privileged` mode with `pid: host` to access host resources. Commands that need host binaries (systemctl, ufw, fail2ban-client, etc.) are automatically wrapped with `nsenter -t 1 -m --` to run in the host's mount namespace. This is transparent -- you don't need to do anything special.
 
 ### 🛡️ Built-in Robustness
 
@@ -120,7 +123,7 @@ Before you begin, you need two things from Telegram:
 
 #### 2a. Docker (Recommended)
 
-Docker runs everything in containers -- no Python setup needed on your server.
+Docker runs everything in containers -- no Python setup needed on your server. The containers run in `privileged` mode with `pid: host` to manage host services (systemctl, ufw, etc.) via nsenter.
 
 ```bash
 git clone https://github.com/MadeByAdem/linux-server-telegram-bot
@@ -520,12 +523,17 @@ cat .env | grep SECRET_TOKEN
 cat .env | grep CHAT_ID
 ```
 
-**"Permission denied" for Docker commands**
+**"Permission denied" for Docker or systemctl commands**
 
 ```bash
-# The bot needs access to the Docker socket
-# Ensure docker-compose.yml mounts /var/run/docker.sock
-# If running natively, add the user to the docker group:
+# Docker mode: the containers need privileged mode and pid:host.
+# Check that docker-compose.yml has these settings:
+grep -A1 "privileged\|pid:" docker-compose.yml
+
+# Verify nsenter works from inside the container:
+docker exec linux-server-telegram-bot-bot-1 nsenter -t 1 -m -- systemctl is-active docker
+
+# Native mode: add the user to the docker group:
 sudo usermod -aG docker $USER
 ```
 
