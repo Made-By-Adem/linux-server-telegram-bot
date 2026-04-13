@@ -1,5 +1,0 @@
-name=ipaddress:port
-name2=ipaddress:port
-name3=ipaddress:port
-
-
