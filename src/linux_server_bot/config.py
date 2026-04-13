@@ -56,13 +56,13 @@ class MonitoredItem:
     """A service or container with a failure-action policy.
 
     ``on_failure`` is one of:
-    - ``"notify_restart"`` (default) -- notify *and* attempt restart.
-    - ``"notify"`` -- send a Telegram alert, but do nothing else.
+    - ``"notify"`` (default) -- send a Telegram alert, but do not restart.
+    - ``"notify_restart"`` -- notify *and* attempt restart.
     - ``"ignore"`` -- silently skip.
     """
 
     name: str
-    on_failure: str = "notify_restart"
+    on_failure: str = "notify"
 
     # Allowed values (class-level constant)
     ACTIONS = ("ignore", "notify", "notify_restart")
@@ -90,9 +90,9 @@ def _parse_monitored_items(raw: list) -> list[MonitoredItem]:
         if isinstance(entry, str):
             items.append(MonitoredItem(name=entry))
         elif isinstance(entry, dict) and "name" in entry:
-            action = str(entry.get("on_failure", "notify_restart"))
+            action = str(entry.get("on_failure", "notify"))
             if action not in MonitoredItem.ACTIONS:
-                action = "notify_restart"
+                action = "notify"
             items.append(MonitoredItem(name=entry["name"], on_failure=action))
     return items
 

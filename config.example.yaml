@@ -105,13 +105,13 @@ monitoring:
 
   # Monitored containers with failure policy.
   # on_failure options:
-  #   notify_restart  - send alert AND auto-restart (default)
-  #   notify          - send alert only, do not restart
+  #   notify          - send alert only, do not restart (default)
+  #   notify_restart  - send alert AND auto-restart
   #   ignore          - do nothing
-  # You can also use a plain string (e.g. "portainer") which defaults to notify_restart.
+  # You can also use a plain string (e.g. "portainer") which defaults to notify.
   containers:
     - name: portainer
-      on_failure: notify_restart
+      on_failure: notify
 
   servers:
     - name: "My VPS"
@@ -122,7 +122,7 @@ monitoring:
   # Policies can be changed at runtime via the Telegram bot menu.
   services:
     - name: nginx
-      on_failure: notify_restart
+      on_failure: notify
     - name: docker
       on_failure: notify
 
