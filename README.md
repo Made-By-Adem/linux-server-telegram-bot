@@ -60,9 +60,10 @@ Containers and services are auto-detected at each monitoring cycle. Failure poli
 
 For advanced users: a REST API that exposes all bot functionality as HTTP endpoints. Useful if you want to build a dashboard, integrate with other tools, or let an AI agent manage multiple servers.
 
-- REST API on `localhost:8120` with API key authentication
+- REST API on `localhost:8120` (auto-detects a free port if busy) with API key authentication
+- API key generated automatically on first startup
 - Swagger UI at `/docs` for interactive exploration
-- Designed for Cloudflare Tunnel exposure (no open ports needed)
+- Designed for Cloudflare Tunnel exposure (no firewall ports needed)
 - See [`agent/`](agent/) for AI agent integration kit
 
 ---
@@ -81,6 +82,18 @@ Telegram Chat
 ```
 
 All processes share a single `config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
+
+### 🛡️ Built-in Robustness
+
+The bot is designed to handle interruptions, misconfigurations, and edge cases gracefully:
+
+- **First-run setup wizard** -- On first start, an interactive wizard walks you through configuring your bot token, chat ID, API key, and optional Wake-on-LAN settings. Each step is tracked, so if you interrupt the setup (Ctrl+C, power loss, SSH disconnect), it **resumes where you left off** next time.
+- **Bot token validation** -- Before starting, the bot verifies your token against the Telegram API. Invalid tokens are caught immediately with a clear error message instead of cryptic failures later.
+- **API key auto-generation** -- A secure API key is generated automatically on first startup and saved to `.env`. No manual key creation needed.
+- **Port auto-detection** -- If the configured API port (default 8120) is busy, the bot automatically tries the next available port. After 20 attempts, it asks you which port to use, or you can skip the API entirely. No firewall ports are opened -- this is purely local (ideal for Cloudflare Tunnel).
+- **Atomic config writes** -- `.env` updates use temp file + rename to prevent corruption if the process is interrupted mid-write.
+- **Graceful shutdown** -- Ctrl+C and `docker stop` shut down cleanly without stack traces or error messages.
+- **Startup banner** -- Shows a summary of active features, monitoring config, and API status so you can verify everything looks right.
 
 ---
 
@@ -114,13 +127,16 @@ CHAT_ID_PERSON1=paste_your_chat_id_here
 ```
 
 > [!NOTE]
-> That's all you need to get started. The other `.env` variables (WoL, API key) are optional -- you can configure them later.
+> That's all you need to get started. The API key is **generated automatically** on first startup. WoL settings are optional -- configure them later if needed.
 
 Then deploy (this starts the bot, monitoring, and API together):
 
 ```bash
 docker compose up -d
 ```
+
+> [!TIP]
+> If running natively (not Docker), you can skip editing `.env` entirely -- the **setup wizard** will walk you through it on first start.
 
 #### Native Python (Alternative)
 
@@ -138,7 +154,7 @@ linux-api        # Start the HTTP API (optional, in another terminal)
 ```
 
 > [!TIP]
-> On first run, the bot launches an interactive **setup wizard** that walks you through configuring your bot token, chat ID, and optional settings. An API key is generated automatically. If the setup is interrupted, it resumes where you left off next time.
+> On first run, the bot launches an interactive **setup wizard** that walks you through configuring your bot token, chat ID, and optional settings. An API key is generated automatically. If the setup is interrupted (Ctrl+C, SSH disconnect, power loss), it **resumes where you left off** next time -- no need to re-enter previous steps.
 
 ### 3. Start chatting
 
@@ -277,6 +293,9 @@ api:
 The API runs on `localhost:8120` only -- it's not directly exposed to the internet. For remote access, expose it securely over HTTPS via [Cloudflare Tunnel](#-cloudflare-tunnel-setup-optional). All endpoints (except `/api/health`) require the `X-API-Key` header.
 
 A secure API key is **generated automatically** on first startup and saved to your `.env` file. You can find it there with `grep API_KEY .env`.
+
+> [!NOTE]
+> If port 8120 is already in use, the API automatically picks the next free port. After 20 attempts, it prompts you to choose a port or skip the API. The actual port is shown in the startup banner and logs. No firewall rules are created -- the port check is purely local.
 
 ```bash
 # Health check (no auth)

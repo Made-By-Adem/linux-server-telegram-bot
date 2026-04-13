@@ -163,8 +163,13 @@ The [`agent/`](agent/) directory contains a self-contained kit for AI agent inte
 - Server pings via netcat
 
 ## Startup & Deployment
-- First-run setup wizard (interactive .env creation, bot token validation, auto-generated API key)
-- Preflight checks: bot token validation via Telegram API, Docker socket access, config file presence
+- First-run setup wizard: 4-step interactive flow (bot token → chat ID → API key → WoL), with state tracking so interrupted setup resumes from where it left off
+- Bot token validation via Telegram `getMe` API before startup
+- Preflight checks: Docker socket access, config file presence
+- API key auto-generated on first run (no manual key creation)
+- API port auto-detection: tries configured port, scans next 20 if busy, interactive prompt as fallback, or skip API entirely
+- Atomic `.env` writes (temp file + rename) to prevent corruption on interruption
 - Graceful shutdown: SIGINT/SIGTERM handled cleanly without stack traces
+- Startup banner: shows active features, monitoring config, and API port
 - Docker Compose (recommended): bot, monitoring, and API as three services
 - Native Python: `pip install -e .` with three entry points (`linux-bot`, `linux-monitor`, `linux-api`)
