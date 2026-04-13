@@ -17,7 +17,17 @@ logger = logging.getLogger(__name__)
 
 def _is_service_running(service_name: str) -> bool:
     result = run_command(["systemctl", "is-active", service_name])
-    return result.stdout.strip() == "active"
+    status = result.stdout.strip()
+    # If systemctl itself failed (e.g. no systemd access), don't treat as "down"
+    if not result.success and not status:
+        logger.warning(
+            "systemctl failed for %s (rc=%d): %s",
+            service_name,
+            result.returncode,
+            result.stderr.strip()[:200],
+        )
+        return True  # Assume running if we can't check
+    return status == "active"
 
 
 def _restart_service(service_name: str) -> bool:
