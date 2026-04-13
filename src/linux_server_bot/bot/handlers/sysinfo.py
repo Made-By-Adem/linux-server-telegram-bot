@@ -143,6 +143,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             row_width=1,
         )
         bot.send_message(message.chat.id, "Manage monitoring thresholds:", reply_markup=markup)
+        show_menu(message)
 
     @bot.message_handler(commands=["sysinfo"])
     @authorized(config)

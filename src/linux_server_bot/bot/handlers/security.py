@@ -111,8 +111,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_security_menu(message):
         _send_security_menu(bot, message.chat.id)
+        show_menu(message)
 
     @bot.message_handler(commands=["security"])
     @authorized(config)
     def handle_security_command(message):
         _send_security_menu(bot, message.chat.id)
+        show_menu(message)

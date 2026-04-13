@@ -216,9 +216,11 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     def handle_docker_menu(message):
         _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)
+        show_menu(message)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
         _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)
+        show_menu(message)

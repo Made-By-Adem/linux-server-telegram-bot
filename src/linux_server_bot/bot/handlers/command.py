@@ -7,10 +7,14 @@ from typing import TYPE_CHECKING
 
 from telebot.handler_backends import State, StatesGroup
 
-from linux_server_bot.bot.menus import BTN_COMMAND
+from linux_server_bot.bot.menus import _FEATURE_BUTTONS, BTN_COMMAND
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.shell import run_shell
 from linux_server_bot.shared.telegram import chunk_message, escape_html
+
+# All known menu button texts -- used to detect when user clicks a menu button
+# while in command input mode.
+_MENU_BUTTON_TEXTS = frozenset(label for _, label in _FEATURE_BUTTONS)
 
 if TYPE_CHECKING:
     import telebot
@@ -45,12 +49,16 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_command_input(message):
         command = message.text
+
+        # If user clicked a menu button or typed a /command, exit command mode
+        if command in _MENU_BUTTON_TEXTS or (command and command.startswith("/")):
+            bot.delete_state(message.from_user.id, message.chat.id)
+            bot.send_message(message.chat.id, "Command mode exited.")
+            show_menu(message)
+            return
+
         logger.info("User %s sent command: %s", message.from_user.first_name, command)
         bot.delete_state(message.from_user.id, message.chat.id)
-
-        if command.lower() in ("/cancel", "cancel"):
-            bot.reply_to(message, "Command canceled.")
-            return
 
         bot.reply_to(message, f"Sending command: {command}")
         result = run_shell(command, timeout=60)

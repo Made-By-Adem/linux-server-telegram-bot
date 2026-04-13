@@ -489,8 +489,8 @@ def print_banner(service: str, config) -> None:
     if service in ("Monitoring", "All"):
         m = config.monitoring
         lines.append(f"  Monitoring: every {m.interval_minutes} min")
-        lines.append(f"    Containers: {', '.join(c.name for c in m.containers) or 'none'}")
-        lines.append(f"    Services: {', '.join(s.name for s in m.services) or 'none'}")
+        lines.append(f"    Containers: {', '.join(c.name for c in config.containers) or 'none'}")
+        lines.append(f"    Services: {', '.join(s.name for s in config.services) or 'none'}")
         lines.append(f"    Servers: {len(m.servers)}")
         lines.append(
             f"    Thresholds: CPU {m.thresholds.get('cpu_percent', 80)}% / "

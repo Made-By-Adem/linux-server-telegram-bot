@@ -91,8 +91,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_updates_menu(message):
         _send_updates_menu(message.chat.id)
+        show_menu(message)
 
     @bot.message_handler(commands=["updates"])
     @authorized(config)
     def handle_updates_command(message):
         _send_updates_menu(message.chat.id)
+        show_menu(message)

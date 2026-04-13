@@ -1,14 +1,67 @@
-"""Safe subprocess wrappers for executing system commands."""
+"""Safe subprocess wrappers for executing system commands.
+
+When running inside Docker with ``pid: host``, commands that need access to
+host binaries (systemctl, ufw, fail2ban-client, etc.) are automatically
+wrapped with ``nsenter -t 1 -m --`` to enter the host's mount namespace.
+"""
 
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from dataclasses import dataclass
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 30
+
+# Commands whose binaries are installed in the Docker image and should NOT
+# be wrapped with nsenter.  Everything else gets nsenter in Docker mode.
+_CONTAINER_LOCAL_COMMANDS = frozenset({
+    "docker",
+    "nc",
+    "python",
+    "python3",
+    "pip",
+    "nsenter",
+    "curl",
+    "stress-ng",
+    "etherwake",
+})
+
+
+@lru_cache(maxsize=1)
+def _in_docker() -> bool:
+    """Detect if we're running inside a Docker container."""
+    return os.path.isfile("/.dockerenv")
+
+
+@lru_cache(maxsize=1)
+def _nsenter_available() -> bool:
+    """Check if nsenter and pid:host are available (PID 1 = host init)."""
+    if not _in_docker():
+        return False
+    try:
+        proc = subprocess.run(
+            ["nsenter", "-t", "1", "-m", "--", "true"],
+            capture_output=True,
+            timeout=5,
+        )
+        return proc.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def _needs_nsenter(cmd_name: str) -> bool:
+    """Should this command be run via nsenter?"""
+    if not _in_docker():
+        return False
+    # Strip sudo prefix
+    if cmd_name == "sudo":
+        return True  # Will be handled by wrapping the full command
+    return cmd_name not in _CONTAINER_LOCAL_COMMANDS
 
 
 @dataclass
@@ -33,8 +86,24 @@ def run_command(
 
     This is the safe default -- use this for all commands where the arguments
     are known at construction time (systemctl, docker, nc, etherwake, etc.).
+
+    When running in Docker with pid:host, commands that require host binaries
+    are automatically wrapped with ``nsenter -t 1 -m --``.
     """
-    logger.debug("run_command: %s", " ".join(cmd))
+    # Determine the actual binary (skip sudo to check the real command)
+    first_cmd = cmd[0]
+    if first_cmd == "sudo" and len(cmd) > 1:
+        actual_cmd = cmd[1]
+    else:
+        actual_cmd = first_cmd
+
+    # Wrap with nsenter if needed
+    if _needs_nsenter(actual_cmd) and _nsenter_available():
+        cmd = ["nsenter", "-t", "1", "-m", "--"] + cmd
+        logger.debug("run_command (nsenter): %s", " ".join(cmd))
+    else:
+        logger.debug("run_command: %s", " ".join(cmd))
+
     try:
         proc = subprocess.run(
             cmd,
@@ -71,8 +140,16 @@ def run_shell(
 
     Use this only for commands that require pipes, redirects, or complex shell
     syntax (e.g. system info scripts, user-supplied custom commands).
+
+    When running in Docker with pid:host, the command is automatically wrapped
+    with ``nsenter -t 1 -m --`` to run in the host's mount namespace.
     """
-    logger.debug("run_shell: %s", cmd[:200])
+    if _in_docker() and _nsenter_available():
+        cmd = f"nsenter -t 1 -m -- sh -c {_shell_quote(cmd)}"
+        logger.debug("run_shell (nsenter): %s", cmd[:200])
+    else:
+        logger.debug("run_shell: %s", cmd[:200])
+
     try:
         proc = subprocess.run(
             cmd,
@@ -96,3 +173,8 @@ def run_shell(
         len(result.stderr),
     )
     return result
+
+
+def _shell_quote(s: str) -> str:
+    """Quote a string for safe shell embedding in single quotes."""
+    return "'" + s.replace("'", "'\"'\"'") + "'"
