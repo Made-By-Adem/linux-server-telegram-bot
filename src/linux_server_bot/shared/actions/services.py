@@ -17,6 +17,36 @@ def _normalize_service_name(name: str) -> str:
     return name
 
 
+def _should_retry_with_sudo(result) -> bool:
+    text = f"{result.stdout}\n{result.stderr}".lower()
+    return (
+        "failed to connect to bus" in text
+        or "access denied" in text
+        or "interactive authentication required" in text
+    )
+
+
+def _run_systemctl(args: list[str], timeout: int = 30):
+    """Run systemctl and retry with sudo when dbus/policy blocks access."""
+    result = run_command(["systemctl"] + args, timeout=timeout)
+    if result.success or not _should_retry_with_sudo(result):
+        return result
+    logger.warning("Retrying systemctl with sudo due to bus/permission error")
+    return run_command(["sudo", "systemctl"] + args, timeout=timeout)
+
+
+def _parse_service_names_from_systemctl(text: str) -> list[str]:
+    names: set[str] = set()
+    for line in text.strip().splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        first = parts[0]
+        if first.endswith(".service"):
+            names.add(_normalize_service_name(first))
+    return sorted(names)
+
+
 @dataclass
 class ServiceStatus:
     name: str
@@ -25,15 +55,27 @@ class ServiceStatus:
 
 
 def get_enabled_service_names() -> list[str]:
-    """Auto-detect all enabled systemd services.
+    """Auto-detect live services, with enabled-services fallback.
 
-    Returns service names (without .service suffix) for all services that
-    are set to start on boot.  These are the services a user would expect
-    to be running at all times.
+    Prefers currently running services. If that detection returns nothing,
+    falls back to enabled services.
     """
-    result = run_command(
+    live = _run_systemctl(
         [
-            "systemctl",
+            "list-units",
+            "--type=service",
+            "--state=running",
+            "--no-legend",
+            "--no-pager",
+            "--plain",
+        ]
+    )
+    live_names = _parse_service_names_from_systemctl(live.stdout) if live.success else []
+    if live_names:
+        return live_names
+
+    enabled = _run_systemctl(
+        [
             "list-unit-files",
             "--type=service",
             "--state=enabled",
@@ -41,26 +83,21 @@ def get_enabled_service_names() -> list[str]:
             "--no-pager",
         ]
     )
-    names: list[str] = []
-    if result.success:
-        for line in result.stdout.strip().splitlines():
-            parts = line.split()
-            if parts:
-                name = parts[0]
-                names.append(_normalize_service_name(name))
-    names.sort()
-    return names
+    if enabled.success:
+        return _parse_service_names_from_systemctl(enabled.stdout)
+
+    return []
 
 
 def get_service_status(name: str) -> ServiceStatus:
     """Get the status of a single service."""
     norm_name = _normalize_service_name(name)
 
-    result = run_command(["systemctl", "is-active", norm_name])
+    result = _run_systemctl(["is-active", norm_name])
     state = result.stdout.strip()
 
     if not state and not norm_name.endswith(".service"):
-        retry = run_command(["systemctl", "is-active", f"{norm_name}.service"])
+        retry = _run_systemctl(["is-active", f"{norm_name}.service"])
         if retry.stdout.strip():
             result = retry
             state = retry.stdout.strip()
@@ -81,7 +118,7 @@ def service_action(action: str, name: str) -> dict:
     """Perform a systemctl action (start/stop/restart) on a service."""
     norm_name = _normalize_service_name(name)
     logger.info("Systemctl %s: %s", action, norm_name)
-    result = run_command(["sudo", "systemctl", action, norm_name])
+    result = _run_systemctl([action, norm_name])
     return {
         "name": norm_name,
         "action": action,

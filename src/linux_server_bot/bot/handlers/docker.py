@@ -6,7 +6,7 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import (
     BTN_DOCKER,
     inline_action_keyboard,
@@ -125,23 +125,23 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         chat_id = call.message.chat.id
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         if action == "status":
-            bot_inst.answer_callback_query(call.id, "Fetching status...")
+            safe_answer_callback_query(bot_inst, call.id, "Fetching status...")
             _send_status(bot_inst, chat_id)
             return
 
         # -- Policy management --
         if action == "policy":
-            bot_inst.answer_callback_query(call.id)
+            safe_answer_callback_query(bot_inst, call.id)
             _send_policy_overview(bot_inst, chat_id, config)
             return
 
         if action == "policy_pick" and target:
-            bot_inst.answer_callback_query(call.id)
+            safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             _send_policy_choice(bot_inst, chat_id, target)
             return
@@ -150,7 +150,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             # parts = ["policy_set", container_name, new_policy]
             new_policy = parts[2] if len(parts) > 2 else None
             if new_policy and new_policy in MonitoredItem.ACTIONS:
-                bot_inst.answer_callback_query(call.id, f"Setting {target} to {new_policy}...")
+                safe_answer_callback_query(bot_inst, call.id, f"Setting {target} to {new_policy}...")
                 update_monitoring_policy("containers", target, new_policy, _get_config_path())
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 icon = _POLICY_ICONS.get(new_policy, "")
@@ -160,13 +160,13 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                     parse_mode="HTML",
                 )
             else:
-                bot_inst.answer_callback_query(call.id, "Invalid policy")
+                safe_answer_callback_query(bot_inst, call.id, "Invalid policy")
             return
 
         # -- Container management --
         # Single-container actions requiring target selection
         if action in ("start", "stop", "restart") and not target:
-            bot_inst.answer_callback_query(call.id)
+            safe_answer_callback_query(bot_inst, call.id)
             containers = get_container_names()
             if not containers:
                 bot_inst.send_message(chat_id, "No containers found.")
@@ -177,7 +177,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         # Execute single-container action
         if action in ("start", "stop", "restart") and target:
-            bot_inst.answer_callback_query(call.id, f"{action.capitalize()}ing {target}...")
+            safe_answer_callback_query(bot_inst, call.id, f"{action.capitalize()}ing {target}...")
             result = container_action(action, target)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
@@ -188,7 +188,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         # All-container actions
         if action in ("start_all", "stop_all", "restart_all"):
             real_action = action.replace("_all", "")
-            bot_inst.answer_callback_query(call.id, f"{real_action.capitalize()}ing all containers...")
+            safe_answer_callback_query(bot_inst, call.id, f"{real_action.capitalize()}ing all containers...")
             results = container_action_all(real_action)
             failures = [r for r in results if not r["success"]]
             if failures:
@@ -197,7 +197,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             _send_status(bot_inst, chat_id)
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("docker", _handle_callback)
 

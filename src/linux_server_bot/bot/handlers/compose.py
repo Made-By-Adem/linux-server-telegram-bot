@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.bot.callbacks import register_callback
+from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import (
     BTN_COMPOSE,
     inline_action_keyboard,
@@ -60,12 +60,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         stack_names = [s.name for s in config.compose_stacks]
 
         if action == "cancel":
-            bot_inst.answer_callback_query(call.id, "Cancelled")
+            safe_answer_callback_query(bot_inst, call.id, "Cancelled")
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
         if action == "status":
-            bot_inst.answer_callback_query(call.id, "Fetching status...")
+            safe_answer_callback_query(bot_inst, call.id, "Fetching status...")
             for stack in config.compose_stacks:
                 result = get_stack_status(stack)
                 header = f"<b>{stack.name}</b> ({stack.path}):\n"
@@ -75,7 +75,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         # Actions requiring stack selection
         if action in ("up", "down", "restart", "pull", "logs") and not target:
-            bot_inst.answer_callback_query(call.id)
+            safe_answer_callback_query(bot_inst, call.id)
             if not stack_names:
                 bot_inst.send_message(chat_id, "No compose stacks configured.")
                 return
@@ -98,10 +98,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action in ("up", "down", "restart", "pull", "logs") and target:
             stack = _find_stack(config.compose_stacks, target)
             if not stack:
-                bot_inst.answer_callback_query(call.id, f"Stack '{target}' not found")
+                safe_answer_callback_query(bot_inst, call.id, f"Stack '{target}' not found")
                 return
 
-            bot_inst.answer_callback_query(call.id, f"Running {action} on {target}...")
+            safe_answer_callback_query(bot_inst, call.id, f"Running {action} on {target}...")
 
             if action == "up":
                 result = stack_up(stack)
@@ -127,7 +127,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             bot_inst.send_message(chat_id, msg)
             return
 
-        bot_inst.answer_callback_query(call.id, "Unknown action")
+        safe_answer_callback_query(bot_inst, call.id, "Unknown action")
 
     register_callback("compose", _handle_callback)
 

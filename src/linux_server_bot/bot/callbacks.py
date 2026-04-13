@@ -22,6 +22,23 @@ logger = logging.getLogger(__name__)
 _handlers: dict[str, Callable] = {}
 
 
+def safe_answer_callback_query(bot, call_id: str, text: str | None = None) -> bool:
+    """Answer callback query safely without crashing on expired callback IDs."""
+    try:
+        if text is None:
+            bot.answer_callback_query(call_id)
+        else:
+            bot.answer_callback_query(call_id, text)
+        return True
+    except Exception as exc:
+        msg = str(exc).lower()
+        if "query is too old" in msg or "query id is invalid" in msg:
+            logger.warning("Ignoring expired callback query id: %s", call_id)
+        else:
+            logger.exception("Failed to answer callback query id: %s", call_id)
+        return False
+
+
 def register_callback(module: str, handler: Callable) -> None:
     """Register a module's callback handler.
 
@@ -47,7 +64,7 @@ def setup_callback_router(bot: telebot.TeleBot, config: AppConfig) -> None:
     @bot.callback_query_handler(func=lambda call: True)
     def route_callback(call):
         if not call.data:
-            bot.answer_callback_query(call.id)
+            safe_answer_callback_query(bot, call.id)
             return
 
         parts = call.data.split(":")
@@ -55,7 +72,7 @@ def setup_callback_router(bot: telebot.TeleBot, config: AppConfig) -> None:
 
         # Auth check
         if call.message.chat.id not in config.allowed_users:
-            bot.answer_callback_query(call.id, "Unauthorized")
+            safe_answer_callback_query(bot, call.id, "Unauthorized")
             return
 
         handler = _handlers.get(module)
@@ -64,6 +81,6 @@ def setup_callback_router(bot: telebot.TeleBot, config: AppConfig) -> None:
                 handler(bot, call, parts[1:])
             except Exception:
                 logger.exception("Callback handler error for %s", call.data)
-                bot.answer_callback_query(call.id, "An error occurred")
+                safe_answer_callback_query(bot, call.id, "An error occurred")
         else:
-            bot.answer_callback_query(call.id, "Unknown action")
+            safe_answer_callback_query(bot, call.id, "Unknown action")

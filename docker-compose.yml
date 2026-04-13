@@ -3,6 +3,8 @@ services:
     build: .
     command: linux-bot
     env_file: .env
+    environment:
+      CONFIG_PATH: /app/config.yaml
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./logs/bot:/app/logs
@@ -22,6 +24,8 @@ services:
     build: .
     command: linux-monitor
     env_file: .env
+    environment:
+      CONFIG_PATH: /app/config.yaml
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./logs/monitoring:/app/logs
@@ -39,6 +43,8 @@ services:
     build: .
     command: linux-api
     env_file: .env
+    environment:
+      CONFIG_PATH: /app/config.yaml
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./logs/api:/app/logs

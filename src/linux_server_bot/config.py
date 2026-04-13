@@ -305,6 +305,15 @@ class _ConfigReloadHandler(FileSystemEventHandler):
             return
         self._schedule_reload()
 
+    def on_moved(self, event) -> None:
+        # Many editors write via temp file + atomic rename.
+        dest = getattr(event, "dest_path", None)
+        if not dest:
+            return
+        if Path(dest).resolve() != self._config_path.resolve():
+            return
+        self._schedule_reload()
+
     def _schedule_reload(self) -> None:
         with self._lock:
             if self._timer is not None:
