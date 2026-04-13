@@ -321,7 +321,7 @@ curl -X POST -H "X-API-Key: your-key" http://localhost:8120/api/docker/restart/n
 open http://localhost:8120/docs
 ```
 
-See [SKILL.md](SKILL.md) for the complete endpoint reference.
+See [`agent/ENDPOINTS.md`](agent/ENDPOINTS.md) for the complete endpoint reference with request/response examples.
 
 ### AI Agent Integration
 

@@ -18,6 +18,5 @@ server_states.json
 .gitignore
 .dockerignore
 README.md
-SKILL.md
 LICENSE
 tests/
