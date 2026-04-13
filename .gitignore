@@ -1,8 +1,4 @@
-# Legacy log directories
-/linux_bot/logs
-/linux_monitoring/logs
-
-# New log directories
+# Log directory
 /logs/
 
 # Environment and config
