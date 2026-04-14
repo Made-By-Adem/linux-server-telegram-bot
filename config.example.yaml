@@ -28,6 +28,8 @@ features:
   stress_test: true
   fan_control: true
   reboot: true
+  custom_scripts: true
+  settings: true
 
 # HTTP API (for multi-server management / AI agent access)
 api:

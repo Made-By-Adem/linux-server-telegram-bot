@@ -25,7 +25,7 @@ Follow the main [README](../README.md) to deploy the bot + API via Docker Compos
 api:
   enabled: true
   port: 8120
-  api_key: "${API_KEY}"
+  api_key: ${API_KEY}
 ```
 
 ### 2. Expose the API (optional, for remote access)

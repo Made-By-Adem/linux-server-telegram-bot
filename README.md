@@ -19,6 +19,7 @@ Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5, but should work on any Li
 ### What can you do with it?
 
 - **Manage Docker** -- start, stop, restart containers
+- **Manage Docker Compose stacks** -- up, down, restart, pull images, view logs
 - **Manage services** -- control systemd services (nginx, docker, ufw, etc.)
 - **Get automatic alerts** -- monitors containers, services, CPU, disk, temperature, SSH brute-force, and Fail2ban. Configurable per item: notify, notify + auto-restart, or ignore.
 - **Check security** -- Fail2ban bans, UFW rules, SSH sessions, failed logins, available updates
@@ -27,6 +28,8 @@ Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5, but should work on any Li
 - **Trigger updates & backups** -- with dry-run preview and rollback support
 - **Ping servers** -- check if your other servers and websites are reachable
 - **Execute commands** -- run any shell command when you need it
+- **Run custom scripts** -- execute configured scripts with configurable timeouts
+- **Manage settings** -- toggle features, adjust monitoring thresholds, and change failure policies from Telegram
 - **REST API** -- every feature above is also available as an HTTP endpoint with Swagger docs, designed for dashboards, automation, and AI agent integration
 
 Everything works from **one Telegram chat** (alerts + interactive menu), and optionally via the **HTTP API** for programmatic access.
@@ -106,7 +109,7 @@ All processes share a single `config.yaml` with hot-reload support (edit while r
 ### 2. Deploy
 
 ```bash
-git clone https://github.com/MadeByAdem/linux-server-telegram-bot
+git clone https://github.com/Made-By-Adem/linux-server-telegram-bot
 cd linux-server-telegram-bot
 
 # Copy example configs
@@ -211,10 +214,12 @@ Disable features to hide their menu buttons:
 ```yaml
 features:
   docker_containers: true
+  docker_compose: true    # disable if not using Compose stacks
   systemd_services: true
   server_ping: true
   security_overview: true
   custom_commands: true
+  custom_scripts: true
   logs: true
   system_info: true
   container_updates: true
@@ -223,7 +228,7 @@ features:
   stress_test: true
   fan_control: true
   reboot: true
-  docker_compose: false  # disable if not using Compose stacks
+  settings: true
 ```
 
 #### Scripts
@@ -272,14 +277,18 @@ API_KEY=my-custom-secret-key
 | Feature | Interactive (menu) | Automatic (monitoring) | API |
 |---------|-------------------|----------------------|-----|
 | Docker containers | Start, stop, restart, status, policy | Per-item policy alerts | All actions + CRUD |
+| Docker Compose stacks | Up, down, restart, pull, logs | -- | All actions + logs |
 | Systemd services | Start, stop, restart, status, policy | Per-item policy alerts | All actions + CRUD |
 | System info | On-demand overview | CPU, temp & disk alerts | On-demand |
 | Security | Full overview on request | Brute force & ban alerts | Full overview |
 | Server ping | On-demand check | State-change alerts | On-demand |
+| Wake-on-LAN | Wake configured device | -- | Via HTTP |
 | Container updates | Dry-run, update, rollback | -- | Via HTTP |
 | Backups | Trigger, status, disk usage | -- | Via HTTP |
-| Log viewer | Browse & download as .txt | -- | -- |
+| Log viewer | Browse & download as .txt | -- | List & read tail |
 | Custom commands | Execute any shell command | -- | Via HTTP |
+| Custom scripts | Run configured scripts | -- | -- |
+| Settings | Toggle features, thresholds, policies | -- | -- |
 
 ---
 
@@ -352,12 +361,19 @@ curl -H "X-API-Key: $KEY" https://api-myserver.example.com/api/docker/status
 |---------|-------------|
 | `/start` | Welcome message |
 | `/menu` | Show interactive menu |
-| `/services` | Service management |
 | `/docker` | Docker container management |
+| `/compose` | Docker Compose stack management |
+| `/services` | Systemd service management |
+| `/sysinfo` | System information |
+| `/security` | Security overview |
 | `/logs` | View log files |
 | `/ping` | Ping configured servers |
 | `/command` | Execute a shell command |
-| `/sysinfo` | System information |
+| `/scripts` | Run custom scripts |
+| `/updates` | Container updates (dry-run, update, rollback) |
+| `/backups` | Backup management |
+| `/wakewol` | Wake-on-LAN |
+| `/settings` | Manage features, thresholds, and policies |
 | `/reboot` | Reboot server (with confirmation) |
 | `/reload` | Reload config without restart |
 
@@ -406,7 +422,7 @@ grep CHAT_ID .env                         # verify chat ID is set
 
 ```bash
 # Verify nsenter works from inside the container:
-docker exec linux-server-telegram-bot-bot-1 nsenter -t 1 -m -- systemctl is-active docker
+docker exec linux-server-bot nsenter -t 1 -m -- systemctl is-active docker
 # Should print "active". If "Operation not permitted", check docker-compose.yml has:
 #   privileged: true
 #   pid: host
