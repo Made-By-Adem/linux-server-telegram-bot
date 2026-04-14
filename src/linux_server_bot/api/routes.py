@@ -35,6 +35,11 @@ from linux_server_bot.shared.shell import run_command, run_shell
 
 logger = logging.getLogger(__name__)
 
+
+def _config_path() -> str:
+    return os.environ.get("CONFIG_PATH", "config.yaml")
+
+
 router = APIRouter(prefix="/api", dependencies=[Depends(verify_api_key)])
 
 
@@ -251,7 +256,7 @@ async def monitoring_thresholds_update(req: ThresholdUpdateRequest):
     if not (lo <= req.value <= hi):
         return {"success": False, "error": f"Value must be between {lo} and {hi}"}
     try:
-        update_monitoring_threshold(req.key, req.value)
+        update_monitoring_threshold(req.key, req.value, _config_path())
         return {"success": True, "data": dict(config.monitoring.thresholds)}
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -393,6 +398,8 @@ async def command_exec(req: CommandRequest):
 
 @router.post("/reboot")
 async def reboot_server(req: RebootRequest):
+    if not config.features.reboot:
+        return {"success": False, "error": "Reboot feature is disabled"}
     if not req.confirm:
         return {"success": False, "error": "Confirmation required (set confirm: true)"}
     result = run_command(["sudo", "reboot", "now"])
@@ -415,7 +422,7 @@ async def services_list():
 @router.post("/services/add")
 async def services_add(req: MonitoredItemRequest):
     try:
-        add_monitored_item("services", req.name, req.on_failure)
+        add_monitored_item("services", req.name, req.on_failure, _config_path())
         return {"success": True, "data": {"name": req.name, "on_failure": req.on_failure}}
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -424,7 +431,7 @@ async def services_add(req: MonitoredItemRequest):
 @router.delete("/services/{name}")
 async def services_remove(name: str):
     try:
-        remove_monitored_item("services", name)
+        remove_monitored_item("services", name, _config_path())
         return {"success": True}
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -433,7 +440,7 @@ async def services_remove(name: str):
 @router.put("/services/{name}/policy")
 async def services_update_policy(name: str, req: MonitoredItemRequest):
     try:
-        update_monitoring_policy("services", name, req.on_failure)
+        update_monitoring_policy("services", name, req.on_failure, _config_path())
         return {"success": True, "data": {"name": name, "on_failure": req.on_failure}}
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -450,7 +457,7 @@ async def containers_list():
 @router.post("/containers/add")
 async def containers_add(req: MonitoredItemRequest):
     try:
-        add_monitored_item("containers", req.name, req.on_failure)
+        add_monitored_item("containers", req.name, req.on_failure, _config_path())
         return {"success": True, "data": {"name": req.name, "on_failure": req.on_failure}}
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -459,7 +466,7 @@ async def containers_add(req: MonitoredItemRequest):
 @router.delete("/containers/{name}")
 async def containers_remove(name: str):
     try:
-        remove_monitored_item("containers", name)
+        remove_monitored_item("containers", name, _config_path())
         return {"success": True}
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -468,7 +475,7 @@ async def containers_remove(name: str):
 @router.put("/containers/{name}/policy")
 async def containers_update_policy(name: str, req: MonitoredItemRequest):
     try:
-        update_monitoring_policy("containers", name, req.on_failure)
+        update_monitoring_policy("containers", name, req.on_failure, _config_path())
         return {"success": True, "data": {"name": name, "on_failure": req.on_failure}}
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -482,8 +489,7 @@ async def containers_update_policy(name: str, req: MonitoredItemRequest):
 @router.post("/config/reload")
 async def config_reload():
     try:
-        config_path = os.environ.get("CONFIG_PATH", "config.yaml")
-        reload_config(config_path)
+        reload_config(_config_path())
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}

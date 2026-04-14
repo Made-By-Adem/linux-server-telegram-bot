@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from telebot.handler_backends import State, StatesGroup
@@ -180,7 +181,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         try:
-            update_monitoring_threshold(key, value)
+            update_monitoring_threshold(key, value, os.environ.get("CONFIG_PATH", "config.yaml"))
             label, unit = _THRESHOLD_LABELS[key]
             bot.send_message(
                 message.chat.id,

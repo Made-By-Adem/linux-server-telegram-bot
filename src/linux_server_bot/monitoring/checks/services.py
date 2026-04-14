@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from linux_server_bot.shared.shell import run_command
+from linux_server_bot.shared.actions.services import get_service_statuses, service_action
 
 if TYPE_CHECKING:
     import telebot
@@ -16,23 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 def _is_service_running(service_name: str) -> bool:
-    result = run_command(["systemctl", "is-active", service_name])
-    status = result.stdout.strip()
-    # If systemctl itself failed (e.g. no systemd access), don't treat as "down"
-    if not result.success and not status:
-        logger.warning(
-            "systemctl failed for %s (rc=%d): %s",
-            service_name,
-            result.returncode,
-            result.stderr.strip()[:200],
-        )
-        return True  # Assume running if we can't check
-    return status == "active"
+    statuses = get_service_statuses([service_name])
+    if not statuses:
+        logger.warning("Could not get status for %s, assuming running", service_name)
+        return True
+    return statuses[0].active
 
 
 def _restart_service(service_name: str) -> bool:
-    run_command(["sudo", "systemctl", "restart", service_name])
-    return _is_service_running(service_name)
+    result = service_action("restart", service_name)
+    return result.get("success", False)
 
 
 def check_services(bot: telebot.TeleBot, config: AppConfig) -> None:

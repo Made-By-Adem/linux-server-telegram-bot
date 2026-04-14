@@ -6,7 +6,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from linux_server_bot.shared.shell import run_command
+from linux_server_bot.shared.actions.docker import container_action, get_container_statuses
 
 if TYPE_CHECKING:
     import telebot
@@ -17,12 +17,17 @@ logger = logging.getLogger(__name__)
 
 
 def _is_container_running(container_name: str) -> bool:
-    result = run_command(["docker", "inspect", "--format", "{{.State.Status}}", container_name])
-    return result.stdout.strip() == "running"
+    statuses = get_container_statuses()
+    for s in statuses:
+        if s.name == container_name:
+            return s.running
+    return False
 
 
 def _restart_container(container_name: str) -> bool:
-    run_command(["docker", "start", container_name])
+    result = container_action("start", container_name)
+    if not result["success"]:
+        return False
     time.sleep(5)
     return _is_container_running(container_name)
 

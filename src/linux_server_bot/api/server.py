@@ -15,7 +15,6 @@ from linux_server_bot.shared.logging_setup import setup_logging
 from linux_server_bot.shared.shell import warmup as shell_warmup
 from linux_server_bot.shared.startup import (
     ensure_env,
-    find_free_port,
     print_banner,
     setup_graceful_shutdown,
 )
@@ -61,16 +60,7 @@ def main() -> None:
         print("API disabled in config.yaml. The Telegram bot and monitoring continue to work without it.")
         return
 
-    port = find_free_port(config.api.port)
-    if port is None:
-        logger.info("API skipped — no free port available")
-        print("API disabled. The Telegram bot and monitoring continue to work without it.")
-        return
-
-    if port != config.api.port:
-        logger.warning("Configured port %d in use, falling back to %d", config.api.port, port)
-        config.api.port = port
-
+    port = config.api.port
     logger.info("Starting Linux Server Bot API on port %d", port)
 
     # Startup banner
