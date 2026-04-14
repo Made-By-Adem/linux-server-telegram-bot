@@ -6,9 +6,12 @@ Submenu actions use InlineKeyboard (embedded in messages, callback-based).
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from telebot import types
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from linux_server_bot.config import AppConfig
@@ -109,6 +112,8 @@ def inline_item_keyboard(
     action: str,
     items: list[str],
     row_width: int = 2,
+    *,
+    labels: list[str] | None = None,
 ) -> types.InlineKeyboardMarkup:
     """Build an InlineKeyboard to select an item.
 
@@ -116,10 +121,22 @@ def inline_item_keyboard(
     e.g. ``inline_item_keyboard("docker", "start", ["nginx", "redis"])``
     produces ``"docker:start:nginx"`` and ``"docker:start:redis"``.
 
+    If *labels* is given it is used for button text (must be same length
+    as *items*).  Items whose ``callback_data`` would exceed Telegram's
+    64-byte limit are silently skipped.
+
     A cancel button is appended automatically.
     """
+    if labels is None:
+        labels = items
     markup = types.InlineKeyboardMarkup(row_width=row_width)
-    buttons = [types.InlineKeyboardButton(name, callback_data=f"{module}:{action}:{name}") for name in items]
+    buttons = []
+    for label, item in zip(labels, items):
+        cb = f"{module}:{action}:{item}"
+        if len(cb.encode()) > 64:
+            _logger.warning("Skipping button '%s': callback_data exceeds 64 bytes", label)
+            continue
+        buttons.append(types.InlineKeyboardButton(label, callback_data=cb))
     for i in range(0, len(buttons), row_width):
         markup.add(*buttons[i : i + row_width])
     markup.add(

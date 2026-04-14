@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 def _get_cpu_usage() -> float | None:
-    """Get CPU usage percentage from top."""
-    result = run_shell("top -bn 1 | awk '/Cpu\\(s\\):/ {print $2}'")
+    """Get total CPU usage percentage (100 - idle) from top."""
+    result = run_shell("top -bn 1 | awk '/^%Cpu/ {printf \"%.1f\", 100 - $8}'")
     try:
         return float(result.stdout.strip())
     except (ValueError, IndexError):

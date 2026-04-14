@@ -62,6 +62,10 @@ def main() -> None:
         print("API disabled. The Telegram bot and monitoring continue to work without it.")
         return
 
+    if port != config.api.port:
+        logger.warning("Configured port %d in use, falling back to %d", config.api.port, port)
+        config.api.port = port
+
     logger.info("Starting Linux Server Bot API on port %d", port)
 
     # Startup banner
@@ -71,7 +75,7 @@ def main() -> None:
     shell_warmup()
 
     app = create_app()
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 
 
 if __name__ == "__main__":

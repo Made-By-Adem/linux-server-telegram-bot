@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     stress-ng \
     dbus \
     systemd \
+    sudo \
     curl \
     gnupg \
     && install -m 0755 -d /etc/apt/keyrings \

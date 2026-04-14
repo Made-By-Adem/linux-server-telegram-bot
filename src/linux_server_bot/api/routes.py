@@ -482,7 +482,8 @@ async def containers_update_policy(name: str, req: MonitoredItemRequest):
 @router.post("/config/reload")
 async def config_reload():
     try:
-        reload_config()
+        config_path = os.environ.get("CONFIG_PATH", "config.yaml")
+        reload_config(config_path)
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}

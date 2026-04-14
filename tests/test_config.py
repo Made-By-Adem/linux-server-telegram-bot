@@ -156,9 +156,7 @@ class TestUpdateMonitoringThreshold:
 class TestUpdateMonitoringPolicy:
     def test_updates_existing_item_in_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
-        config_file.write_text(
-            yaml.dump({"services": [{"name": "nginx", "on_failure": "notify"}]})
-        )
+        config_file.write_text(yaml.dump({"services": [{"name": "nginx", "on_failure": "notify"}]}))
         update_monitoring_policy("services", "nginx", "ignore", config_path=config_file)
 
         reloaded = yaml.safe_load(config_file.read_text())

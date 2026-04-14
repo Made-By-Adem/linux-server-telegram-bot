@@ -62,20 +62,43 @@ def read_log_tail(index: int, tail: int = 50) -> dict:
         return {"success": False, "error": f"Invalid log index: {index}"}
     filepath = available[index]["path"]
     try:
-        with open(filepath) as f:
-            lines = f.readlines()
-        last = lines[-tail:] if tail else lines
+        with open(filepath, errors="replace") as f:
+            last = _tail_lines(f, tail)
         return {
             "success": True,
             "path": filepath,
             "name": os.path.basename(filepath),
-            "total_lines": len(lines),
             "lines_returned": len(last),
             "content": "".join(last),
         }
     except Exception as exc:
         logger.exception("Failed to read log file: %s", filepath)
         return {"success": False, "error": str(exc)}
+
+
+def _tail_lines(f, n: int) -> list[str]:
+    """Read the last *n* lines from a file object efficiently (seek from EOF)."""
+    if n <= 0:
+        return f.readlines()
+    try:
+        f.seek(0, 2)
+        size = f.tell()
+    except OSError:
+        return f.readlines()[-n:]
+
+    if size == 0:
+        return []
+
+    block_size = 4096
+    data = ""
+    pos = size
+    while pos > 0 and data.count("\n") <= n:
+        read_size = min(block_size, pos)
+        pos -= read_size
+        f.seek(pos)
+        data = f.read(read_size) + data
+
+    return data.splitlines(keepends=True)[-n:]
 
 
 def _safe_size(path: str) -> int | None:

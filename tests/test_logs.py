@@ -39,7 +39,6 @@ class TestReadLogTail:
             result = read_log_tail(0, tail=5)
             assert result["success"] is True
             assert result["lines_returned"] == 5
-            assert result["total_lines"] == 100
             assert "line 99" in result["content"]
         finally:
             config.logfiles = original
