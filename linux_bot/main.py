@@ -10,6 +10,7 @@ from glob import glob
 import html
 import textwrap
 import json
+import threading
 
 # ENV VARIABLES
 # Load environment variables from .env
@@ -1104,6 +1105,49 @@ def handle_all_other_messages(message):
     logging.info("I'm sorry, I don't understand that command.")
     logging.debug(f"Handle_all_other_messages function ended.\n\n")
 
+def warmup():
+    """Pre-warm Docker, systemd, and Telegram API so the first user interaction is fast."""
+    logging.info("Starting warmup...")
+
+    def warmup_docker():
+        try:
+            subprocess.run('docker ps -a --format {{.Names}}', shell=True,
+                           capture_output=True, text=True, timeout=120)
+            logging.info("Docker warmup complete.")
+        except Exception as e:
+            logging.warning(f"Docker warmup failed: {e}")
+
+    def warmup_systemctl():
+        try:
+            subprocess.run('systemctl list-units --type=service --no-pager -q',
+                           shell=True, capture_output=True, text=True, timeout=30)
+            logging.info("Systemctl warmup complete.")
+        except Exception as e:
+            logging.warning(f"Systemctl warmup failed: {e}")
+
+    def warmup_telegram():
+        try:
+            bot.get_me()
+            logging.info("Telegram API warmup complete.")
+        except Exception as e:
+            logging.warning(f"Telegram API warmup failed: {e}")
+
+    threads = [
+        threading.Thread(target=warmup_docker, daemon=True),
+        threading.Thread(target=warmup_systemctl, daemon=True),
+        threading.Thread(target=warmup_telegram, daemon=True),
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=120)
+
+    logging.info("Warmup complete.")
+
+
+print("Bot starting up...")
+logging.info("Bot starting up...")
+warmup()
 print("Bot running...")
 logging.info("Bot running...")
 bot.polling()

@@ -1,6 +1,7 @@
 [Unit]
 Description=Linux Monitoring
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 ExecStart=/your/path/to/linux_monitoring/venv/bin/python /your/path/to/linux_monitoring/monitoring.py

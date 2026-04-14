@@ -316,6 +316,10 @@ def job():
     logging.info("Monitoring finished. See you in 5 minutes.")
 
 
+# Wait for system to fully boot before first monitoring run,
+# so it doesn't overload the system and slow down the bot.
+logging.info("Waiting 2 minutes for system to fully boot before first monitoring check...")
+time.sleep(120)
 job()
 
 # Schedule the job to run at the specified intervals (5 minute intervals, 00:00, 00:05 etc.)
