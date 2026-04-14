@@ -19,6 +19,7 @@ from linux_server_bot.shared.actions.docker import (
     get_container_statuses,
 )
 from linux_server_bot.shared.auth import authorized
+from linux_server_bot.shared.telegram import send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -145,10 +146,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.edit_message_text("\U0001f504 Fetching container status...", chat_id, call.message.message_id)
-            text = _get_status_text(config)
-            bot_inst.edit_message_text(text, chat_id, call.message.message_id, parse_mode="HTML")
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            send_loading(bot_inst, chat_id, "Docker status")
+            _send_status(bot_inst, chat_id, config)
             return
 
         # -- Policy management --
@@ -196,8 +196,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action in ("start", "stop", "restart") and target:
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, f"\U0001f504 {action.capitalize()}ing <b>{target}</b>...", parse_mode="HTML")
+            send_loading(bot_inst, chat_id, f"{action.capitalize()} {target}")
             result = container_action(action, target)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
@@ -210,8 +209,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             real_action = action.replace("_all", "")
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, f"\U0001f504 {real_action.capitalize()}ing all containers...")
+            send_loading(bot_inst, chat_id, f"{real_action.capitalize()} all containers")
             results = container_action_all(real_action, container_names)
             failures = [r for r in results if not r["success"]]
             if failures:
@@ -224,19 +222,16 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
     register_callback("docker", _handle_callback)
 
-    def _show_docker(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        loading = bot.reply_to(message, "\U0001f504 Loading Docker...")
-        text = _get_status_text(config)
-        bot.edit_message_text(text, message.chat.id, loading.message_id, parse_mode="HTML")
-        _send_docker_menu(bot, message.chat.id)
-
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
-        _show_docker(message)
+        send_loading(bot, message.chat.id, "Docker")
+        _send_status(bot, message.chat.id, config)
+        _send_docker_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
-        _show_docker(message)
+        send_loading(bot, message.chat.id, "Docker")
+        _send_status(bot, message.chat.id, config)
+        _send_docker_menu(bot, message.chat.id)

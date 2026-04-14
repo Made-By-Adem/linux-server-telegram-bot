@@ -15,7 +15,7 @@ from linux_server_bot.shared.actions.security import (
     get_ufw_status,
 )
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.telegram import chunk_message, escape_html
+from linux_server_bot.shared.telegram import chunk_message, escape_html, send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -50,8 +50,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "fail2ban":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        bot.send_chat_action(chat_id, "typing")
-        bot.send_message(chat_id, "\U0001f504 Checking fail2ban...")
+        send_loading(bot, chat_id, "Fail2ban")
         result = get_fail2ban_status()
         if result["available"]:
             text = "<b>Fail2ban Status:</b>\n" + escape_html(result["status"])
@@ -65,8 +64,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "ufw":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        bot.send_chat_action(chat_id, "typing")
-        bot.send_message(chat_id, "\U0001f504 Checking UFW...")
+        send_loading(bot, chat_id, "UFW")
         result = get_ufw_status()
         text = "<b>UFW Status:</b>\n" + escape_html(result["status"])
         for chunk_text in chunk_message(text):
@@ -76,8 +74,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "ssh":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        bot.send_chat_action(chat_id, "typing")
-        bot.send_message(chat_id, "\U0001f504 Checking SSH sessions...")
+        send_loading(bot, chat_id, "SSH sessions")
         result = get_ssh_sessions()
         text = "<b>Current sessions:</b>\n" + escape_html(result["current_sessions"])
         bot.send_message(chat_id, text, parse_mode="HTML")
@@ -89,8 +86,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "failed":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        bot.send_chat_action(chat_id, "typing")
-        bot.send_message(chat_id, "\U0001f504 Checking failed logins...")
+        send_loading(bot, chat_id, "Failed logins")
         result = get_failed_logins()
         if result["found"]:
             text = "<b>Recent failed logins:</b>\n" + escape_html(result["output"])
@@ -103,8 +99,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "updates":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        bot.send_chat_action(chat_id, "typing")
-        bot.send_message(chat_id, "\U0001f504 Checking available updates...")
+        send_loading(bot, chat_id, "Available updates")
         result = get_available_updates()
         if result["up_to_date"]:
             bot.send_message(chat_id, "System is up to date.")

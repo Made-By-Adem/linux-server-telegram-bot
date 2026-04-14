@@ -12,7 +12,7 @@ from linux_server_bot.bot.menus import BTN_FAN, BTN_STRESS, BTN_SYSINFO, inline_
 from linux_server_bot.config import THRESHOLD_KEYS, update_monitoring_threshold
 from linux_server_bot.shared.actions.sysinfo import get_sysinfo_text, run_stress_test, set_fan_state
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.telegram import chunk_message, escape_html
+from linux_server_bot.shared.telegram import chunk_message, escape_html, send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -130,17 +130,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_sysinfo(message):
         logger.info("User %s requested system info", message.from_user.first_name)
-        bot.send_chat_action(message.chat.id, "typing")
-        loading = bot.reply_to(message, "\U0001f504 Loading System info...")
+        send_loading(bot, message.chat.id, "System info")
         text = get_sysinfo_text()
         if text.strip():
             output = "<b>System info:</b>\n" + escape_html(text)
-            chunks = chunk_message(output)
-            if chunks:
-                # Replace loading message with first chunk
-                bot.edit_message_text(chunks[0], message.chat.id, loading.message_id, parse_mode="HTML")
-                for chunk in chunks[1:]:
-                    bot.send_message(message.chat.id, chunk, parse_mode="HTML")
+            for chunk in chunk_message(output):
+                bot.send_message(message.chat.id, chunk, parse_mode="HTML")
         # Show thresholds button after sysinfo
         markup = inline_action_keyboard(
             "sysinfo",

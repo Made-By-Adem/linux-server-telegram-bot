@@ -19,6 +19,7 @@ from linux_server_bot.shared.actions.services import (
     service_action_all,
 )
 from linux_server_bot.shared.auth import authorized
+from linux_server_bot.shared.telegram import send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -134,10 +135,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.edit_message_text("\U0001f504 Fetching service status...", chat_id, call.message.message_id)
-            text = _get_status_text(config.get_service_names())
-            bot_inst.edit_message_text(text, chat_id, call.message.message_id, parse_mode="HTML")
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            send_loading(bot_inst, chat_id, "Service status")
+            _send_status(bot_inst, chat_id, config.get_service_names())
             return
 
         # -- Policy management --
@@ -184,8 +184,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action in ("start", "stop", "restart") and target:
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, f"\U0001f504 {action.capitalize()}ing <b>{target}</b>...", parse_mode="HTML")
+            send_loading(bot_inst, chat_id, f"{action.capitalize()} {target}")
             result = service_action(action, target)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
@@ -197,8 +196,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             real_action = action.replace("_all", "")
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, f"\U0001f504 {real_action.capitalize()}ing all services...")
+            send_loading(bot_inst, chat_id, f"{real_action.capitalize()} all services")
             results = service_action_all(real_action, service_names)
             failures = [r for r in results if not r["success"]]
             if failures:
@@ -211,19 +209,16 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
     register_callback("services", _handle_callback)
 
-    def _show_services(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        loading = bot.reply_to(message, "\U0001f504 Loading Services...")
-        text = _get_status_text(config.get_service_names())
-        bot.edit_message_text(text, message.chat.id, loading.message_id, parse_mode="HTML")
-        _send_services_menu(bot, message.chat.id)
-
     @bot.message_handler(func=lambda m: m.text == BTN_SERVICES)
     @authorized(config)
     def handle_services_menu(message):
-        _show_services(message)
+        send_loading(bot, message.chat.id, "Services")
+        _send_status(bot, message.chat.id, config.get_service_names())
+        _send_services_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["services"])
     @authorized(config)
     def handle_services_command(message):
-        _show_services(message)
+        send_loading(bot, message.chat.id, "Services")
+        _send_status(bot, message.chat.id, config.get_service_names())
+        _send_services_menu(bot, message.chat.id)

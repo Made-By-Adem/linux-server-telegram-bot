@@ -13,6 +13,7 @@ from linux_server_bot.shared.actions.servers import (
     save_server_states,
 )
 from linux_server_bot.shared.auth import authorized
+from linux_server_bot.shared.telegram import send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -67,8 +68,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 if server.name == target:
                     safe_answer_callback_query(bot_inst, call.id)
                     bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-                    bot_inst.send_chat_action(chat_id, "typing")
-                    bot_inst.send_message(chat_id, f"\U0001f504 Pinging {target}...")
+                    send_loading(bot_inst, chat_id, f"Ping {target}")
                     _do_ping(chat_id, server.name, server.host, server.port)
                     return
             safe_answer_callback_query(bot_inst, call.id, f"Server '{target}' not found")

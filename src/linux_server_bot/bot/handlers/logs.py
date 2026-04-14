@@ -14,7 +14,7 @@ from telebot import types
 from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_LOGS
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.telegram import chunk_message, escape_html
+from linux_server_bot.shared.telegram import chunk_message, escape_html, send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -204,8 +204,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             log_path = cached[idx]
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, f"\U0001f504 Loading {escape_html(os.path.basename(log_path))}...")
+            send_loading(bot_inst, chat_id, os.path.basename(log_path))
             logger.info("User requested log: %s", log_path)
             _view_log(bot_inst, chat_id, log_path)
             return

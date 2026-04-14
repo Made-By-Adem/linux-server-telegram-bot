@@ -13,7 +13,7 @@ from linux_server_bot.shared.actions.backups import (
     trigger_backup,
 )
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.telegram import chunk_message, escape_html
+from linux_server_bot.shared.telegram import chunk_message, escape_html, send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -53,8 +53,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f4be Starting backup (this may take a while)...")
+            send_loading(bot_inst, chat_id, "Backup")
             result = trigger_backup(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -67,8 +66,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f504 Checking backup status...")
+            send_loading(bot_inst, chat_id, "Backup status")
             result = get_backup_status()
             output = result.get("output", "No backup status available.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -78,8 +76,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "size":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f504 Checking backup size...")
+            send_loading(bot_inst, chat_id, "Backup size")
             result = get_backup_size()
             bot_inst.send_message(
                 chat_id,

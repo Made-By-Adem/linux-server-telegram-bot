@@ -13,7 +13,7 @@ from linux_server_bot.shared.actions.updates import (
     trigger_updates,
 )
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.telegram import chunk_message, escape_html
+from linux_server_bot.shared.telegram import chunk_message, escape_html, send_loading
 
 if TYPE_CHECKING:
     import telebot
@@ -58,8 +58,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "dry_run":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f50d Running dry-run...")
+            send_loading(bot_inst, chat_id, "Dry-run")
             result = dry_run_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -69,8 +68,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "run":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f504 Starting container updates (this may take a while)...")
+            send_loading(bot_inst, chat_id, "Container updates")
             result = trigger_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -83,8 +81,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "rollback":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\u21a9\ufe0f Rolling back...")
+            send_loading(bot_inst, chat_id, "Rollback")
             result = rollback_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
