@@ -154,32 +154,47 @@ def _send_startup_message_when_ready(bot, warmup_thread) -> None:
     import threading
 
     def _wait_and_send():
-        # Wait for shell warmup so the first user interaction is fast.
+        t0 = time.monotonic()
+
+        logger.info("[startup] waiting for shell warmup thread...")
         warmup_thread.join(timeout=_HEALTH_POLL_TIMEOUT)
+        logger.info("[startup] shell warmup done (%.1fs)", time.monotonic() - t0)
 
         # Warm the Telegram API connection (TLS handshake, DNS) so the
         # first real send_message doesn't take ~15 s.
+        t1 = time.monotonic()
         try:
             bot.get_me()
-            logger.debug("Telegram API connection warmed")
-        except Exception:
-            logger.debug("Telegram API warm-up failed (non-fatal)")
+            logger.info("[startup] Telegram API warmed via get_me (%.1fs)", time.monotonic() - t1)
+        except Exception as exc:
+            logger.warning("[startup] Telegram API warm-up failed (%.1fs): %s", time.monotonic() - t1, exc)
 
+        logger.info("[startup] waiting for all compose containers to be healthy...")
         deadline = time.time() + _HEALTH_POLL_TIMEOUT
+        poll_count = 0
         while time.time() < deadline:
+            poll_count += 1
             if _all_compose_containers_healthy():
+                logger.info("[startup] all containers healthy (poll #%d, %.1fs)", poll_count, time.monotonic() - t0)
+
                 # Pre-warm the actual handler queries so first tap is instant.
                 # Results are cached (30s TTL) in docker/services modules.
+                t2 = time.monotonic()
                 _pre_warm_handlers()
+                logger.info("[startup] handler pre-warm done (%.1fs)", time.monotonic() - t2)
 
                 for chat_id in config.allowed_users:
+                    t3 = time.monotonic()
                     try:
                         bot.send_message(chat_id, "\u2705 Bot is online and ready.")
+                        logger.info("[startup] sent ready to %s (%.1fs)", chat_id, time.monotonic() - t3)
                     except Exception:
-                        logger.warning("Could not send startup message to chat_id=%s", chat_id)
+                        logger.warning("[startup] failed to send ready to %s (%.1fs)", chat_id, time.monotonic() - t3)
+
+                logger.info("[startup] COMPLETE total=%.1fs", time.monotonic() - t0)
                 return
             time.sleep(_HEALTH_POLL_INTERVAL)
-        logger.warning("Timed out waiting for all containers to become healthy")
+        logger.warning("[startup] TIMED OUT waiting for healthy containers (%.1fs)", time.monotonic() - t0)
 
     t = threading.Thread(target=_wait_and_send, daemon=True)
     t.start()
@@ -187,11 +202,15 @@ def _send_startup_message_when_ready(bot, warmup_thread) -> None:
 
 def main() -> None:
     """Main entry point for the bot."""
+    boot_t0 = time.monotonic()
+
     load_dotenv()
+    logger.info("[boot] dotenv loaded (%.1fs)", time.monotonic() - boot_t0)
 
     # Ensure .env is configured (runs setup wizard on first run)
     env_path = os.path.join(os.getcwd(), ".env")
     ensure_env(env_path)
+    logger.info("[boot] env ensured (%.1fs)", time.monotonic() - boot_t0)
 
     # Graceful shutdown on SIGINT/SIGTERM
     setup_graceful_shutdown()
@@ -199,13 +218,17 @@ def main() -> None:
     # Load config (starts watchdog file watcher)
     config_path = os.environ.get("CONFIG_PATH", "config.yaml")
     load_config(config_path)
+    logger.info("[boot] config loaded (%.1fs)", time.monotonic() - boot_t0)
 
     # Setup logging
     setup_logging("bot", config.log_directory)
-    logger.info("Starting Linux Server Bot v2.0.0")
+    logger.info("[boot] logging setup (%.1fs)", time.monotonic() - boot_t0)
+    logger.info("[boot] Starting Linux Server Bot v2.0.0")
 
     # Preflight checks
+    t = time.monotonic()
     checks = run_preflight_checks(config_path, config.bot_token)
+    logger.info("[boot] preflight checks done (%.1fs)", time.monotonic() - t)
     if not checks["bot_token"]:
         logger.error("Cannot start bot without a valid token. Exiting.")
         raise SystemExit(1)
@@ -220,10 +243,13 @@ def main() -> None:
 
     warmup_thread = threading.Thread(target=shell_warmup, daemon=True, name="shell-warmup")
     warmup_thread.start()
+    logger.info("[boot] shell warmup thread started (%.1fs)", time.monotonic() - boot_t0)
 
     # Create bot
+    t = time.monotonic()
     bot = create_bot(config.bot_token)
     bot.add_custom_filter(StateFilter(bot))
+    logger.info("[boot] bot created (%.1fs)", time.monotonic() - t)
 
     # show_menu callback passed to all handlers
     def show_menu(message):
@@ -258,11 +284,14 @@ def main() -> None:
         show_menu(message)
 
     # Register all feature handler modules
+    t = time.monotonic()
     for module in _HANDLER_MODULES:
         module.register(bot, config, show_menu)
+    logger.info("[boot] %d handler modules registered (%.1fs)", len(_HANDLER_MODULES), time.monotonic() - t)
 
     # Setup the central callback query router (must be after handler registration)
     setup_callback_router(bot, config)
+    logger.info("[boot] callback router setup (%.1fs)", time.monotonic() - boot_t0)
 
     # Catch-all handler (must be registered LAST)
     @bot.message_handler(func=lambda m: True)
@@ -271,12 +300,14 @@ def main() -> None:
             return
         bot.reply_to(message, "I'm sorry, I don't understand that command.")
 
-    logger.info("Bot running...")
     _start_health_thread()
+    logger.info("[boot] health thread started (%.1fs)", time.monotonic() - boot_t0)
 
     # Notify all users once warmup is done and every container is healthy.
     _send_startup_message_when_ready(bot, warmup_thread)
+    logger.info("[boot] startup-message thread launched (%.1fs)", time.monotonic() - boot_t0)
 
+    logger.info("[boot] starting infinity_polling (%.1fs)", time.monotonic() - boot_t0)
     bot.infinity_polling(timeout=30, long_polling_timeout=30)
 
 

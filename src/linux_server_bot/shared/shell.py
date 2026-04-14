@@ -187,14 +187,20 @@ def warmup() -> None:
     All warm-up commands run in parallel to minimise total wall-clock time.
     """
     import concurrent.futures
+    import time as _time
+
+    warmup_t0 = _time.monotonic()
 
     # 1. Populate lru_cache for runtime detection (must finish before the
     #    parallel phase because run_command reads these caches).
-    _in_docker()
-    _nsenter_available()
-
-    # 2. Fire off warm-up commands concurrently.
+    in_docker = _in_docker()
     nsenter_ok = _nsenter_available()
+    logger.info(
+        "[warmup] detection: in_docker=%s nsenter=%s (%.1fs)",
+        in_docker,
+        nsenter_ok,
+        _time.monotonic() - warmup_t0,
+    )
 
     # Commands that only make sense when nsenter is available (host tools).
     host_cmds: list[tuple[list[str], int]] = []
@@ -228,18 +234,22 @@ def warmup() -> None:
     ]
 
     all_cmds = docker_cmds + host_cmds
+    logger.info("[warmup] running %d commands in parallel...", len(all_cmds))
 
     def _run(args_timeout):
         cmd, timeout = args_timeout
+        label = " ".join(cmd[:3])
+        t = _time.monotonic()
         try:
             run_command(cmd, timeout=timeout)
+            logger.info("[warmup] OK  %-30s (%.1fs)", label, _time.monotonic() - t)
         except Exception:
-            logger.debug("Warmup command failed (non-fatal): %s", " ".join(cmd))
+            logger.warning("[warmup] FAIL %-30s (%.1fs)", label, _time.monotonic() - t)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(all_cmds) or 1) as pool:
         list(pool.map(_run, all_cmds))
 
-    logger.debug("Shell warmup complete")
+    logger.info("[warmup] COMPLETE (%.1fs)", _time.monotonic() - warmup_t0)
 
 
 def _shell_quote(s: str) -> str:
