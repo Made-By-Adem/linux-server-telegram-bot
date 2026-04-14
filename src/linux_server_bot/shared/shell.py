@@ -178,23 +178,56 @@ def run_shell(
 
 
 def warmup() -> None:
-    """Pre-warm cached checks, Docker CLI, and nsenter path.
+    """Pre-warm cached checks, Docker CLI, nsenter, and common host tools.
 
     Call once at startup so the first user interaction doesn't pay the
-    cold-start cost of nsenter detection, Docker daemon handshake, or
-    first systemctl/journalctl invocation through nsenter.
+    cold-start cost of nsenter detection, Docker daemon handshake,
+    systemctl, journalctl, or other common commands used by handlers.
+
+    All warm-up commands run in parallel to minimise total wall-clock time.
     """
-    # Populate lru_cache for runtime detection
+    import concurrent.futures
+
+    # 1. Populate lru_cache for runtime detection (must finish before the
+    #    parallel phase because run_command reads these caches).
     _in_docker()
     _nsenter_available()
 
-    # Warm up Docker CLI + daemon with the exact commands handlers use
-    run_command(["docker", "info", "-f", "{{.ID}}"], timeout=15)
-    run_command(["docker", "ps", "-a", "--format", "{{.Names}}"], timeout=15)
+    # 2. Fire off warm-up commands concurrently.
+    nsenter_ok = _nsenter_available()
 
-    # Warm up nsenter + systemctl path (first call through nsenter is slow)
-    if _nsenter_available():
-        run_command(["systemctl", "is-active", "docker"], timeout=10)
+    # Commands that only make sense when nsenter is available (host tools).
+    host_cmds: list[tuple[list[str], int]] = []
+    if nsenter_ok:
+        host_cmds = [
+            # systemctl (services handler)
+            (["systemctl", "is-active", "docker"], 10),
+            (["systemctl", "list-units", "--type=service", "--state=running",
+              "--no-legend", "--no-pager", "--plain"], 15),
+            # journalctl (security handler -- failed logins)
+            (["journalctl", "--no-pager", "-n", "1"], 10),
+            # Basic host tools used by sysinfo
+            (["hostname"], 5),
+            (["who"], 5),
+        ]
+
+    # Commands that run inside the container (Docker CLI).
+    docker_cmds: list[tuple[list[str], int]] = [
+        (["docker", "info", "-f", "{{.ID}}"], 15),
+        (["docker", "ps", "-a", "--format", "{{.Names}}"], 15),
+    ]
+
+    all_cmds = docker_cmds + host_cmds
+
+    def _run(args_timeout):
+        cmd, timeout = args_timeout
+        try:
+            run_command(cmd, timeout=timeout)
+        except Exception:
+            logger.debug("Warmup command failed (non-fatal): %s", " ".join(cmd))
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(all_cmds) or 1) as pool:
+        list(pool.map(_run, all_cmds))
 
     logger.debug("Shell warmup complete")
 
