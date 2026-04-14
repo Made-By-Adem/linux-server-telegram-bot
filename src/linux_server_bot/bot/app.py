@@ -157,6 +157,14 @@ def _send_startup_message_when_ready(bot, warmup_thread) -> None:
         # Wait for shell warmup so the first user interaction is fast.
         warmup_thread.join(timeout=_HEALTH_POLL_TIMEOUT)
 
+        # Warm the Telegram API connection (TLS handshake, DNS) so the
+        # first real send_message doesn't take ~15 s.
+        try:
+            bot.get_me()
+            logger.debug("Telegram API connection warmed")
+        except Exception:
+            logger.debug("Telegram API warm-up failed (non-fatal)")
+
         deadline = time.time() + _HEALTH_POLL_TIMEOUT
         while time.time() < deadline:
             if _all_compose_containers_healthy():
