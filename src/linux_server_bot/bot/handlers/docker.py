@@ -56,12 +56,11 @@ def _send_docker_menu(bot, chat_id: int) -> None:
     bot.send_message(chat_id, "What do you want to do?", reply_markup=markup)
 
 
-def _send_status(bot, chat_id: int, config) -> None:
-    """Show status of configured containers."""
+def _get_status_text(config) -> str:
+    """Build status text for configured containers."""
     container_names = config.get_container_names()
     if not container_names:
-        bot.send_message(chat_id, "No containers configured. Add containers to config.yaml.")
-        return
+        return "No containers configured. Add containers to config.yaml."
 
     all_statuses = get_container_statuses()
     status_map = {s.name: s for s in all_statuses}
@@ -74,7 +73,12 @@ def _send_status(bot, chat_id: int, config) -> None:
             lines.append(f"{icon} {s.name}: {s.status}")
         else:
             lines.append(f"\u2753 {name}: not found on server")
-    bot.send_message(chat_id, "\n".join(lines), parse_mode="HTML")
+    return "\n".join(lines)
+
+
+def _send_status(bot, chat_id: int, config) -> None:
+    """Show status of configured containers."""
+    bot.send_message(chat_id, _get_status_text(config), parse_mode="HTML")
 
 
 def _get_config_path() -> str:
@@ -141,10 +145,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f504 Fetching container status...")
-            _send_status(bot_inst, chat_id, config)
+            bot_inst.edit_message_text("\U0001f504 Fetching container status...", chat_id, call.message.message_id)
+            text = _get_status_text(config)
+            bot_inst.edit_message_text(text, chat_id, call.message.message_id, parse_mode="HTML")
             return
 
         # -- Policy management --
@@ -220,18 +224,19 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
     register_callback("docker", _handle_callback)
 
+    def _show_docker(message):
+        bot.send_chat_action(message.chat.id, "typing")
+        loading = bot.reply_to(message, "\U0001f504 Loading Docker...")
+        text = _get_status_text(config)
+        bot.edit_message_text(text, message.chat.id, loading.message_id, parse_mode="HTML")
+        _send_docker_menu(bot, message.chat.id)
+
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.reply_to(message, "\U0001f504 Loading Docker...")
-        _send_status(bot, message.chat.id, config)
-        _send_docker_menu(bot, message.chat.id)
+        _show_docker(message)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.reply_to(message, "\U0001f504 Loading Docker...")
-        _send_status(bot, message.chat.id, config)
-        _send_docker_menu(bot, message.chat.id)
+        _show_docker(message)

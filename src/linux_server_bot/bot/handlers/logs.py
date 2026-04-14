@@ -217,13 +217,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_LOGS)
     @authorized(config)
     def handle_logs_menu(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.reply_to(message, "\U0001f504 Loading Logs...")
         _send_logs_menu(message.chat.id)
 
     @bot.message_handler(commands=["logs"])
     @authorized(config)
     def handle_logs_command(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.reply_to(message, "\U0001f504 Loading Logs...")
         _send_logs_menu(message.chat.id)

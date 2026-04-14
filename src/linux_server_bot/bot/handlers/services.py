@@ -56,17 +56,21 @@ def _send_services_menu(bot, chat_id: int) -> None:
     bot.send_message(chat_id, "What do you want to do?", reply_markup=markup)
 
 
-def _send_status(bot, chat_id: int, services: list[str]) -> None:
+def _get_status_text(services: list[str]) -> str:
+    """Build status text for configured services."""
     if not services:
-        bot.send_message(chat_id, "No services configured. Add services to config.yaml.")
-        return
+        return "No services configured. Add services to config.yaml."
 
     statuses = get_service_statuses(services)
     lines = ["<b>Status services:</b>"]
     for s in statuses:
         icon = "\u2705" if s.active else "\u274c"
         lines.append(f"{icon} {s.name}: {s.state}")
-    bot.send_message(chat_id, "\n".join(lines), parse_mode="HTML")
+    return "\n".join(lines)
+
+
+def _send_status(bot, chat_id: int, services: list[str]) -> None:
+    bot.send_message(chat_id, _get_status_text(services), parse_mode="HTML")
 
 
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
@@ -130,10 +134,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             bot_inst.send_chat_action(chat_id, "typing")
-            bot_inst.send_message(chat_id, "\U0001f504 Fetching service status...")
-            _send_status(bot_inst, chat_id, config.get_service_names())
+            bot_inst.edit_message_text("\U0001f504 Fetching service status...", chat_id, call.message.message_id)
+            text = _get_status_text(config.get_service_names())
+            bot_inst.edit_message_text(text, chat_id, call.message.message_id, parse_mode="HTML")
             return
 
         # -- Policy management --
@@ -207,18 +211,19 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
     register_callback("services", _handle_callback)
 
+    def _show_services(message):
+        bot.send_chat_action(message.chat.id, "typing")
+        loading = bot.reply_to(message, "\U0001f504 Loading Services...")
+        text = _get_status_text(config.get_service_names())
+        bot.edit_message_text(text, message.chat.id, loading.message_id, parse_mode="HTML")
+        _send_services_menu(bot, message.chat.id)
+
     @bot.message_handler(func=lambda m: m.text == BTN_SERVICES)
     @authorized(config)
     def handle_services_menu(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.reply_to(message, "\U0001f504 Loading Services...")
-        _send_status(bot, message.chat.id, config.get_service_names())
-        _send_services_menu(bot, message.chat.id)
+        _show_services(message)
 
     @bot.message_handler(commands=["services"])
     @authorized(config)
     def handle_services_command(message):
-        bot.send_chat_action(message.chat.id, "typing")
-        bot.reply_to(message, "\U0001f504 Loading Services...")
-        _send_status(bot, message.chat.id, config.get_service_names())
-        _send_services_menu(bot, message.chat.id)
+        _show_services(message)
