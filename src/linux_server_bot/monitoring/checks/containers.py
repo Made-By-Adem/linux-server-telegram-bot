@@ -6,7 +6,11 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
-from linux_server_bot.shared.actions.docker import container_action, get_container_statuses
+from linux_server_bot.shared.actions.docker import (
+    container_action,
+    get_container_statuses,
+    resolve_container_patterns,
+)
 
 if TYPE_CHECKING:
     import telebot
@@ -44,7 +48,8 @@ def check_containers(bot: telebot.TeleBot, config: AppConfig) -> None:
         logger.info("No containers configured for monitoring")
         return
 
-    for item in config.containers:
+    resolved = resolve_container_patterns(config.containers)
+    for item in resolved:
         container = item.name
         policy = item.on_failure
         logger.info("Checking container %s (policy: %s)", container, policy)

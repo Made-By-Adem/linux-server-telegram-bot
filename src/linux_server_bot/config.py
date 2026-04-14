@@ -204,9 +204,19 @@ class AppConfig:
         return "notify"
 
     def get_container_policy(self, name: str) -> str:
-        """Look up the on_failure policy for a container, default ``'notify'``."""
+        """Look up the on_failure policy for a container, default ``'notify'``.
+
+        Supports glob patterns: if no exact match is found, pattern entries
+        (containing ``*``, ``?``, or ``[``) are checked via ``fnmatch``.
+        """
+        import fnmatch
+
         for item in self.containers:
             if item.name == name:
+                return item.on_failure
+        # Fallback: check glob patterns
+        for item in self.containers:
+            if any(c in item.name for c in ("*", "?", "[")) and fnmatch.fnmatch(name, item.name):
                 return item.on_failure
         return "notify"
 

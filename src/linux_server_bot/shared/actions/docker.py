@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import fnmatch
 import logging
 import threading
 import time
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from linux_server_bot.shared.shell import run_command
+
+if TYPE_CHECKING:
+    from linux_server_bot.config import MonitoredItem
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +50,45 @@ def get_container_names() -> list[str]:
     if result.success and result.stdout.strip():
         return [n for n in result.stdout.strip().split("\n") if n]
     return []
+
+
+def _is_pattern(name: str) -> bool:
+    """Check if a container name contains glob wildcard characters."""
+    return any(c in name for c in ("*", "?", "["))
+
+
+def resolve_container_patterns(items: list[MonitoredItem]) -> list[MonitoredItem]:
+    """Expand wildcard patterns in monitored items against actual Docker containers.
+
+    Items with names containing ``*``, ``?``, or ``[`` are treated as glob
+    patterns (fnmatch) and matched against all container names from
+    ``docker ps -a``.  Non-pattern items are passed through as-is.
+
+    Returns a new list of ``MonitoredItem`` objects with concrete container
+    names.  Duplicate names are suppressed (first match wins).
+    """
+    from linux_server_bot.config import MonitoredItem as MI
+
+    has_patterns = any(_is_pattern(item.name) for item in items)
+    if not has_patterns:
+        return list(items)
+
+    all_names = get_container_names()
+    result: list[MonitoredItem] = []
+    seen: set[str] = set()
+
+    for item in items:
+        if _is_pattern(item.name):
+            for name in all_names:
+                if fnmatch.fnmatch(name, item.name) and name not in seen:
+                    result.append(MI(name=name, on_failure=item.on_failure))
+                    seen.add(name)
+        else:
+            if item.name not in seen:
+                result.append(item)
+                seen.add(item.name)
+
+    return result
 
 
 def invalidate_status_cache() -> None:

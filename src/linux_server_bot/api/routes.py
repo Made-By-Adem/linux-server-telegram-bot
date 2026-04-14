@@ -31,6 +31,7 @@ from linux_server_bot.shared.actions import (
     updates,
     wol,
 )
+from linux_server_bot.shared.actions.docker import resolve_container_patterns
 from linux_server_bot.shared.shell import run_command, run_shell
 
 logger = logging.getLogger(__name__)
@@ -75,12 +76,11 @@ class MonitoredItemRequest(BaseModel):
 async def docker_status():
     if not os.path.exists("/var/run/docker.sock"):
         return {"success": False, "error": "Docker socket not available"}
-    container_names = config.get_container_names()
-    if not container_names:
+    resolved = resolve_container_patterns(config.containers)
+    if not resolved:
         return {"success": True, "data": []}
     all_statuses = docker.get_container_statuses()
-    # Filter to only configured containers
-    configured = set(container_names)
+    configured = {item.name for item in resolved}
     filtered = [s for s in all_statuses if s.name in configured]
     return {"success": True, "data": [asdict(s) for s in filtered]}
 
@@ -103,7 +103,9 @@ async def docker_action_all(action: str):
     if action not in ("start_all", "stop_all", "restart_all"):
         return {"success": False, "error": f"Invalid action: {action}"}
     real_action = action.replace("_all", "")
-    results = docker.container_action_all(real_action, config.get_container_names())
+    resolved = resolve_container_patterns(config.containers)
+    names = [item.name for item in resolved]
+    results = docker.container_action_all(real_action, names)
     return {"success": all(r["success"] for r in results), "data": results}
 
 

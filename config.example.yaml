@@ -58,9 +58,25 @@ services:
 # the monitoring loop. You can add/remove containers via the API or
 # edit this file directly (changes are hot-reloaded).
 # Same on_failure options as services above.
+#
+# Wildcard patterns (glob syntax):
+#   *        matches any number of characters
+#   ?        matches exactly one character
+#   [abc]    matches one of the characters a, b, or c
+#
+# Examples:
+#   "HS-*"          matches all containers starting with "HS-"
+#   "app-??"        matches app-01, app-ab, etc. (exactly 2 chars after "app-")
+#   "*-pos-server"  matches anything ending in "-pos-server"
+#
+# Patterns are resolved dynamically against `docker ps -a` on every
+# check, so new containers matching the pattern are picked up
+# automatically without a config change.
 containers:
   - name: portainer
     on_failure: notify
+  # - name: "HS-*"
+  #   on_failure: notify
 
 # Docker Compose stacks
 compose_stacks:

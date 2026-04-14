@@ -17,6 +17,7 @@ from linux_server_bot.shared.actions.docker import (
     container_action,
     container_action_all,
     get_container_statuses,
+    resolve_container_patterns,
 )
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.telegram import send_loading
@@ -59,21 +60,21 @@ def _send_docker_menu(bot, chat_id: int) -> None:
 
 def _get_status_text(config) -> str:
     """Build status text for configured containers."""
-    container_names = config.get_container_names()
-    if not container_names:
+    resolved = resolve_container_patterns(config.containers)
+    if not resolved:
         return "No containers configured. Add containers to config.yaml."
 
     all_statuses = get_container_statuses()
     status_map = {s.name: s for s in all_statuses}
 
     lines = ["<b>Status containers:</b>"]
-    for name in container_names:
-        s = status_map.get(name)
+    for item in resolved:
+        s = status_map.get(item.name)
         if s:
             icon = "\u2705" if s.running else "\u274c"
             lines.append(f"{icon} {s.name}: {s.status}")
         else:
-            lines.append(f"\u2753 {name}: not found on server")
+            lines.append(f"\u2753 {item.name}: not found on server")
     return "\n".join(lines)
 
 
@@ -88,16 +89,16 @@ def _get_config_path() -> str:
 
 def _send_policy_overview(bot, chat_id: int, config) -> None:
     """Show current monitoring policies for all configured containers."""
-    container_names = config.get_container_names()
-    if not container_names:
+    resolved = resolve_container_patterns(config.containers)
+    if not resolved:
         bot.send_message(chat_id, "No containers configured. Add containers to config.yaml.")
         return
 
+    container_names = [item.name for item in resolved]
     lines = ["<b>Monitoring policies (containers):</b>", ""]
-    for name in container_names:
-        policy = config.get_container_policy(name)
-        icon = _POLICY_ICONS.get(policy, "?")
-        lines.append(f"{icon} <b>{name}</b>: {policy}")
+    for item in resolved:
+        icon = _POLICY_ICONS.get(item.on_failure, "?")
+        lines.append(f"{icon} <b>{item.name}</b>: {item.on_failure}")
 
     lines.append("\nTap a container below to change its policy:")
     markup = inline_item_keyboard("docker", "policy_pick", container_names, row_width=2)
@@ -181,7 +182,8 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         # -- Container management --
-        container_names = config.get_container_names()
+        resolved = resolve_container_patterns(config.containers)
+        container_names = [item.name for item in resolved]
 
         if action in ("start", "stop", "restart") and not target:
             safe_answer_callback_query(bot_inst, call.id)
