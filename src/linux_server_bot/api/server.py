@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from linux_server_bot.api.routes import router
 from linux_server_bot.config import config, load_config
 from linux_server_bot.shared.logging_setup import setup_logging
+from linux_server_bot.shared.shell import warmup as shell_warmup
 from linux_server_bot.shared.startup import (
     ensure_env,
     find_free_port,
@@ -65,6 +66,9 @@ def main() -> None:
 
     # Startup banner
     print_banner("API", config)
+
+    # Warm up shell detection + Docker CLI
+    shell_warmup()
 
     app = create_app()
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")

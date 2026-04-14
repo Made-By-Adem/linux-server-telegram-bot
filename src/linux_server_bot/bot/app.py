@@ -15,6 +15,7 @@ from linux_server_bot.bot.menus import build_main_menu
 from linux_server_bot.config import config, load_config, reload_config
 from linux_server_bot.shared.auth import authorized
 from linux_server_bot.shared.logging_setup import setup_logging
+from linux_server_bot.shared.shell import warmup as shell_warmup
 from linux_server_bot.shared.startup import (
     ensure_env,
     print_banner,
@@ -94,6 +95,9 @@ def main() -> None:
 
     # Startup banner
     print_banner("Bot", config)
+
+    # Warm up shell detection + Docker CLI so the first user command is fast
+    shell_warmup()
 
     # Create bot
     bot = create_bot(config.bot_token)

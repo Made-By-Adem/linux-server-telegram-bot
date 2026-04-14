@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from linux_server_bot.config import config, load_config
 from linux_server_bot.monitoring.checks import containers, security, servers, services, system
 from linux_server_bot.shared.logging_setup import setup_logging
+from linux_server_bot.shared.shell import warmup as shell_warmup
 from linux_server_bot.shared.startup import (
     ensure_env,
     print_banner,
@@ -74,6 +75,9 @@ def main() -> None:
 
     # Startup banner
     print_banner("Monitoring", config)
+
+    # Warm up shell detection + Docker CLI
+    shell_warmup()
 
     bot = create_bot(config.bot_token)
 

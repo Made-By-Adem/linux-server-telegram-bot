@@ -177,6 +177,27 @@ def run_shell(
     return result
 
 
+def warmup() -> None:
+    """Pre-warm cached checks, Docker CLI, and nsenter path.
+
+    Call once at startup so the first user interaction doesn't pay the
+    cold-start cost of nsenter detection, Docker daemon handshake, or
+    first systemctl/journalctl invocation through nsenter.
+    """
+    # Populate lru_cache for runtime detection
+    _in_docker()
+    _nsenter_available()
+
+    # Warm up Docker CLI / daemon socket connection
+    run_command(["docker", "info", "-f", "{{.ID}}"], timeout=15)
+
+    # Warm up nsenter path (used by systemctl, journalctl, fail2ban, etc.)
+    if _nsenter_available():
+        run_command(["true"], timeout=5)
+
+    logger.debug("Shell warmup complete")
+
+
 def _shell_quote(s: str) -> str:
     """Quote a string for safe shell embedding in single quotes."""
     return "'" + s.replace("'", "'\"'\"'") + "'"
