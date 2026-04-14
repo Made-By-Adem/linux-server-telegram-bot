@@ -1,5 +1,6 @@
 services:
   bot:
+    container_name: linux-server-bot
     build: .
     command: linux-bot
     env_file: .env
@@ -26,6 +27,7 @@ services:
       retries: 3
 
   monitoring:
+    container_name: linux-server-monitoring
     build: .
     command: linux-monitor
     env_file: .env
@@ -48,6 +50,7 @@ services:
       retries: 3
 
   api:
+    container_name: linux-server-api
     build: .
     command: linux-api
     env_file: .env
