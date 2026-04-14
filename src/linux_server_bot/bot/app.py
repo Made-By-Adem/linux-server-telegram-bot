@@ -146,6 +146,14 @@ def main() -> None:
 
     logger.info("Bot running...")
     _start_health_thread()
+
+    # Notify all users that the bot is ready
+    for chat_id in config.allowed_users:
+        try:
+            bot.send_message(chat_id, "\u2705 Bot is online and ready.")
+        except Exception:
+            logger.warning("Could not send startup message to chat_id=%s", chat_id)
+
     bot.infinity_polling(timeout=30, long_polling_timeout=30)
 
 
