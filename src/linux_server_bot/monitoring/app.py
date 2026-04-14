@@ -52,7 +52,7 @@ def _run_checks(bot) -> None:
 
 def main() -> None:
     """Main entry point for the monitoring service."""
-    load_dotenv()
+    load_dotenv(override=True)
 
     # Ensure .env is configured
     env_path = os.path.join(os.getcwd(), ".env")

@@ -211,7 +211,7 @@ def main() -> None:
     """Main entry point for the bot."""
     boot_t0 = time.monotonic()
 
-    load_dotenv()
+    load_dotenv(override=True)
     logger.info("[boot] dotenv loaded (%.1fs)", time.monotonic() - boot_t0)
 
     # Ensure .env is configured (runs setup wizard on first run)

@@ -41,7 +41,7 @@ def create_app() -> FastAPI:
 
 def main() -> None:
     """Main entry point for the API server."""
-    load_dotenv()
+    load_dotenv(override=True)
 
     # Ensure .env is configured (auto-generates API key if missing)
     env_path = os.path.join(os.getcwd(), ".env")
