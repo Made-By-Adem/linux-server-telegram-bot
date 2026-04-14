@@ -227,10 +227,25 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
+        import time as _t
+
+        t0 = _t.monotonic()
         loading = send_loading(bot, message.chat.id, "Docker")
+        t1 = _t.monotonic()
         text = _get_status_text(config)
+        t2 = _t.monotonic()
         bot.edit_message_text(text, message.chat.id, loading.message_id, parse_mode="HTML")
+        t3 = _t.monotonic()
         _send_docker_menu(bot, message.chat.id)
+        t4 = _t.monotonic()
+        logger.info(
+            "TIMING docker_menu: send_loading=%.2fs get_status=%.2fs edit_msg=%.2fs send_menu=%.2fs total=%.2fs",
+            t1 - t0,
+            t2 - t1,
+            t3 - t2,
+            t4 - t3,
+            t4 - t0,
+        )
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)

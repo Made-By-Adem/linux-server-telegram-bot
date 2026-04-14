@@ -65,8 +65,10 @@ def get_container_statuses() -> list[ContainerStatus]:
 
     with _status_cache_lock:
         if _status_cache is not None and (time.time() - _status_cache_time) < _CACHE_TTL:
+            logger.debug("get_container_statuses: CACHE HIT (age=%.1fs)", time.time() - _status_cache_time)
             return list(_status_cache)
 
+    logger.debug("get_container_statuses: CACHE MISS, running docker ps")
     result = _run_docker(["ps", "-a", "--format", "{{.Names}}\t{{.Status}}\t{{.State}}"])
     containers: list[ContainerStatus] = []
     if result.success:
