@@ -1,0 +1,76 @@
+services:
+  bot:
+    container_name: linux-server-bot
+    build: .
+    command: linux-bot
+    env_file: .env
+    environment:
+      CONFIG_PATH: /app/config.yaml
+    volumes:
+      - ./.env:/app/.env
+      - ./config.yaml:/app/config.yaml
+      - ./logs/bot:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+      - /opt/scripts:/opt/scripts:ro
+      - /var/log:/var/log:ro
+    restart: unless-stopped
+    network_mode: host
+    # pid:host + privileged required for nsenter to access host
+    # systemctl, ufw, fail2ban-client, journalctl, and custom commands.
+    pid: host
+    privileged: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, time; assert time.time() - os.path.getmtime('/tmp/bot_healthy') < 300"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  monitoring:
+    container_name: linux-server-monitoring
+    build: .
+    command: linux-monitor
+    env_file: .env
+    environment:
+      CONFIG_PATH: /app/config.yaml
+    volumes:
+      - ./.env:/app/.env
+      - ./config.yaml:/app/config.yaml
+      - ./logs/monitoring:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+      - /var/log:/var/log:ro
+    restart: unless-stopped
+    pid: host
+    privileged: true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, time; assert time.time() - os.path.getmtime('/tmp/monitor_healthy') < 600"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  api:
+    container_name: linux-server-api
+    build: .
+    command: linux-api
+    env_file: .env
+    environment:
+      CONFIG_PATH: /app/config.yaml
+    ports:
+      - "8120:8120"
+    volumes:
+      - ./.env:/app/.env
+      - ./config.yaml:/app/config.yaml
+      - ./logs/api:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+      - /opt/scripts:/opt/scripts:ro
+      - /var/log:/var/log:ro
+    restart: unless-stopped
+    pid: host
+    privileged: true
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8120/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

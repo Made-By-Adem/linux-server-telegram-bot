@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "linux-server-bot"
+version = "2.0.0"
+description = "Telegram bot for managing and monitoring Linux servers"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "pyTelegramBotAPI>=4.14",
+    "python-dotenv>=1.0",
+    "schedule>=1.2",
+    "pyyaml>=6.0",
+    "watchdog>=3.0",
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.1"]
+test = ["pytest>=7.0"]
+
+[project.scripts]
+linux-bot = "linux_server_bot.bot.app:main"
+linux-monitor = "linux_server_bot.monitoring.app:main"
+linux-api = "linux_server_bot.api.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]

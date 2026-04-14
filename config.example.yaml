@@ -1,0 +1,144 @@
+# Linux Server Bot - Configuration
+# Environment variables can be referenced with ${VAR_NAME} syntax.
+# Copy this file to config.yaml and adjust values.
+
+telegram:
+  bot_token: ${SECRET_TOKEN}
+  allowed_users:
+    - ${CHAT_ID_PERSON1}
+
+wol:
+  address: ${WOL_ADDRESS}
+  hostname: ${WOL_HOSTNAME}
+  interface: eth0
+
+# Toggle features on/off. Disabled features hide their menu buttons.
+features:
+  systemd_services: true
+  docker_containers: true
+  docker_compose: true
+  custom_commands: true
+  wol: true
+  security_overview: true
+  backups: true
+  container_updates: true
+  logs: true
+  server_ping: true
+  system_info: true
+  stress_test: true
+  fan_control: true
+  reboot: true
+  custom_scripts: true
+  settings: true
+
+# HTTP API (for multi-server management / AI agent access)
+api:
+  enabled: true
+  port: 8120
+  api_key: ${API_KEY}
+
+# Systemd services to manage and monitor.
+# Only services listed here are shown in the bot menu AND checked by
+# the monitoring loop. You can add/remove services via the API or
+# edit this file directly (changes are hot-reloaded).
+# on_failure options:
+#   notify          - send alert only, do not restart (default)
+#   notify_restart  - send alert AND auto-restart
+#   ignore          - do nothing
+services:
+  - name: nginx
+    on_failure: notify
+  - name: docker
+    on_failure: notify
+  - name: ufw
+    on_failure: notify
+
+# Docker containers to manage and monitor.
+# Only containers listed here are shown in the bot menu AND checked by
+# the monitoring loop. You can add/remove containers via the API or
+# edit this file directly (changes are hot-reloaded).
+# Same on_failure options as services above.
+containers:
+  - name: portainer
+    on_failure: notify
+
+# Docker Compose stacks
+compose_stacks:
+  - name: "media-stack"
+    path: /opt/stacks/media
+  - name: "monitoring"
+    path: /opt/stacks/monitoring
+
+# Servers to ping (used by both bot menu and monitoring loop)
+servers:
+  - name: "My VPS"
+    host: "1.2.3.4"
+    port: 443
+
+# Log file paths or directories.
+# Directories are scanned for *.log files (rotated logs are excluded).
+# Remove or comment out any paths that don't exist on your system.
+logfiles:
+  # -- Security & intrusion detection --
+  - /var/log/auth.log              # SSH logins, sudo, PAM authentication
+  - /var/log/fail2ban.log          # Fail2ban IP bans and jail activity
+  - /var/log/ufw.log               # UFW firewall blocked/allowed traffic
+  - /var/log/rkhunter.log           # Rkhunter main log
+  - /var/log/rkhunter-scan-*.log   # Rkhunter scan reports (latest match)
+  - /var/log/aide/                 # AIDE file integrity check reports (daily)
+
+  # -- System --
+  - /var/log/syslog                # General system log
+  - /var/log/kern.log              # Kernel messages (hardware, drivers)
+  - /var/log/dpkg.log              # Package installs and updates
+
+  # -- Automatic updates --
+  - /var/log/unattended-upgrades/  # Automatic security update logs
+
+  # -- Docker & containers --
+  - /var/log/docker-updates/       # Container update script logs
+
+  # -- Web server (uncomment if applicable) --
+  # - /var/log/nginx/access.log
+  # - /var/log/nginx/error.log
+  # - /var/log/apache2/access.log
+  # - /var/log/apache2/error.log
+
+# External script paths
+scripts:
+  update_containers: /usr/local/bin/update-containers
+  backup: /usr/local/bin/backup
+  # Custom scripts. Optional 'timeout' in seconds (default: 300).
+  # custom:
+  #   - name: rkhunter
+  #     path: /opt/scripts/rkhunter-scan.sh
+  #     timeout: 600
+
+# Path to shared server states file (used by both bot and monitoring)
+server_states_path: server_states.json
+
+# Log directory for the application
+log_directory: ./logs
+
+# Monitoring configuration
+monitoring:
+  interval_minutes: 5
+
+  # Servers to ping (monitoring-specific, with state-change alerts).
+  # These servers are pinged every interval and you get notified only
+  # when a server goes offline or comes back online.
+  servers:
+    - name: "My VPS"
+      host: "1.2.3.4"
+      port: 443
+
+  thresholds:
+    cpu_percent: 80
+    storage_percent: 90
+    temperature_celsius: 50
+
+  security:
+    check_fail2ban: true
+    check_ufw: true
+    check_ssh_sessions: true
+    check_failed_logins: true

@@ -1,3 +1,25 @@
-/linux_bot/logs
-/linux_monitoring/logs
+# Log directory
+/logs/
+
+# Environment and config
 .env
+config.yaml
+server_states.json
+.setup_state.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+config.prod.yaml
