@@ -11,6 +11,8 @@ AI Agent ─────── REST API ───┘
                                ▲ single config.yaml (hot-reloadable)
 ```
 
+<img src="example.jpg" alt="Telegram bot interface" width="250">
+
 Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5, but should work on any Linux server.
 
 > [!TIP]
