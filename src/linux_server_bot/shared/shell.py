@@ -202,8 +202,18 @@ def warmup() -> None:
         host_cmds = [
             # systemctl (services handler)
             (["systemctl", "is-active", "docker"], 10),
-            (["systemctl", "list-units", "--type=service", "--state=running",
-              "--no-legend", "--no-pager", "--plain"], 15),
+            (
+                [
+                    "systemctl",
+                    "list-units",
+                    "--type=service",
+                    "--state=running",
+                    "--no-legend",
+                    "--no-pager",
+                    "--plain",
+                ],
+                15,
+            ),
             # journalctl (security handler -- failed logins)
             (["journalctl", "--no-pager", "-n", "1"], 10),
             # Basic host tools used by sysinfo
