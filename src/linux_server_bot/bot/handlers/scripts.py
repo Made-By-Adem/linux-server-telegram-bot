@@ -53,10 +53,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 safe_answer_callback_query(bot_inst, call.id, "Script not found")
                 return
 
-            safe_answer_callback_query(bot_inst, call.id, f"Running {script.name}...")
+            safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            msg = f"\U0001f504 Running <b>{escape_html(script.name)}</b>..."
-            bot_inst.send_message(chat_id, msg, parse_mode="HTML")
+            loading = bot_inst.send_message(chat_id, f"\U0001f504 Running {escape_html(script.name)}...")
 
             logger.info("User running script: %s (%s, timeout=%ds)", script.name, script.path, script.timeout)
             result = run_shell(script.path, timeout=script.timeout)
@@ -64,10 +63,13 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
             if output.strip():
                 header = f"<b>{escape_html(script.name)} output:</b>\n"
-                for chunk in chunk_message(header + escape_html(output)):
-                    bot_inst.send_message(chat_id, chunk, parse_mode="HTML")
+                chunks = chunk_message(header + escape_html(output))
+                if chunks:
+                    bot_inst.edit_message_text(chunks[0], chat_id, loading.message_id, parse_mode="HTML")
+                    for chunk in chunks[1:]:
+                        bot_inst.send_message(chat_id, chunk, parse_mode="HTML")
             else:
-                bot_inst.send_message(chat_id, "Script produced no output.")
+                bot_inst.edit_message_text("Script produced no output.", chat_id, loading.message_id)
 
             icon = "\u2705" if result.success else "\u26a0\ufe0f"
             msg = f"{icon} {escape_html(script.name)} finished (exit code {result.returncode})."

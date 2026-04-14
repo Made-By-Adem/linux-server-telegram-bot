@@ -204,9 +204,11 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             log_path = cached[idx]
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, os.path.basename(log_path))
+            loading = send_loading(bot_inst, chat_id, os.path.basename(log_path))
             logger.info("User requested log: %s", log_path)
             _view_log(bot_inst, chat_id, log_path)
+            # Edit loading message to indicate completion
+            bot_inst.edit_message_text(f"\u2705 {os.path.basename(log_path)}", chat_id, loading.message_id)
             return
 
         safe_answer_callback_query(bot_inst, call.id, "Unknown action")

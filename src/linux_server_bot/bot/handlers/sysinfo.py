@@ -130,12 +130,15 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_sysinfo(message):
         logger.info("User %s requested system info", message.from_user.first_name)
-        send_loading(bot, message.chat.id, "System info")
+        loading = send_loading(bot, message.chat.id, "System info")
         text = get_sysinfo_text()
         if text.strip():
             output = "<b>System info:</b>\n" + escape_html(text)
-            for chunk in chunk_message(output):
-                bot.send_message(message.chat.id, chunk, parse_mode="HTML")
+            chunks = chunk_message(output)
+            if chunks:
+                bot.edit_message_text(chunks[0], message.chat.id, loading.message_id, parse_mode="HTML")
+                for chunk in chunks[1:]:
+                    bot.send_message(message.chat.id, chunk, parse_mode="HTML")
         # Show thresholds button after sysinfo
         markup = inline_action_keyboard(
             "sysinfo",

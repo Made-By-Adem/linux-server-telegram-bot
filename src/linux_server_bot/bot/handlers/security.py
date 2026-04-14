@@ -49,35 +49,38 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
 
     if action == "fail2ban":
         safe_answer_callback_query(bot, call.id)
+        loading = send_loading(bot, chat_id, "Fail2ban")
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        send_loading(bot, chat_id, "Fail2ban")
         result = get_fail2ban_status()
         if result["available"]:
             text = "<b>Fail2ban Status:</b>\n" + escape_html(result["status"])
-            bot.send_message(chat_id, text, parse_mode="HTML")
+            bot.edit_message_text(text, chat_id, loading.message_id, parse_mode="HTML")
             if result.get("sshd_jail"):
                 bot.send_message(chat_id, "<b>SSH Jail:</b>\n" + escape_html(result["sshd_jail"]), parse_mode="HTML")
         else:
-            bot.send_message(chat_id, "Fail2ban not available or not running.")
+            bot.edit_message_text("Fail2ban not available or not running.", chat_id, loading.message_id)
         return
 
     if action == "ufw":
         safe_answer_callback_query(bot, call.id)
+        loading = send_loading(bot, chat_id, "UFW")
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        send_loading(bot, chat_id, "UFW")
         result = get_ufw_status()
         text = "<b>UFW Status:</b>\n" + escape_html(result["status"])
-        for chunk_text in chunk_message(text):
-            bot.send_message(chat_id, chunk_text, parse_mode="HTML")
+        chunks = chunk_message(text)
+        if chunks:
+            bot.edit_message_text(chunks[0], chat_id, loading.message_id, parse_mode="HTML")
+            for chunk_text in chunks[1:]:
+                bot.send_message(chat_id, chunk_text, parse_mode="HTML")
         return
 
     if action == "ssh":
         safe_answer_callback_query(bot, call.id)
+        loading = send_loading(bot, chat_id, "SSH sessions")
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        send_loading(bot, chat_id, "SSH sessions")
         result = get_ssh_sessions()
         text = "<b>Current sessions:</b>\n" + escape_html(result["current_sessions"])
-        bot.send_message(chat_id, text, parse_mode="HTML")
+        bot.edit_message_text(text, chat_id, loading.message_id, parse_mode="HTML")
         if result.get("recent_logins"):
             text2 = "<b>Last 10 logins:</b>\n" + escape_html(result["recent_logins"])
             bot.send_message(chat_id, text2, parse_mode="HTML")
@@ -85,28 +88,34 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
 
     if action == "failed":
         safe_answer_callback_query(bot, call.id)
+        loading = send_loading(bot, chat_id, "Failed logins")
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        send_loading(bot, chat_id, "Failed logins")
         result = get_failed_logins()
         if result["found"]:
             text = "<b>Recent failed logins:</b>\n" + escape_html(result["output"])
-            for chunk_text in chunk_message(text):
-                bot.send_message(chat_id, chunk_text, parse_mode="HTML")
+            chunks = chunk_message(text)
+            if chunks:
+                bot.edit_message_text(chunks[0], chat_id, loading.message_id, parse_mode="HTML")
+                for chunk_text in chunks[1:]:
+                    bot.send_message(chat_id, chunk_text, parse_mode="HTML")
         else:
-            bot.send_message(chat_id, "No recent failed logins found.")
+            bot.edit_message_text("No recent failed logins found.", chat_id, loading.message_id)
         return
 
     if action == "updates":
         safe_answer_callback_query(bot, call.id)
+        loading = send_loading(bot, chat_id, "Available updates")
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-        send_loading(bot, chat_id, "Available updates")
         result = get_available_updates()
         if result["up_to_date"]:
-            bot.send_message(chat_id, "System is up to date.")
+            bot.edit_message_text("\u2705 System is up to date.", chat_id, loading.message_id)
         else:
             text = "<b>Available updates:</b>\n" + escape_html(result["output"])
-            for chunk_text in chunk_message(text):
-                bot.send_message(chat_id, chunk_text, parse_mode="HTML")
+            chunks = chunk_message(text)
+            if chunks:
+                bot.edit_message_text(chunks[0], chat_id, loading.message_id, parse_mode="HTML")
+                for chunk_text in chunks[1:]:
+                    bot.send_message(chat_id, chunk_text, parse_mode="HTML")
         return
 
     safe_answer_callback_query(bot, call.id, "Unknown action")

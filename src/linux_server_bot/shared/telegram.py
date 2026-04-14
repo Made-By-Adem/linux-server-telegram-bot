@@ -65,12 +65,9 @@ def send_message(bot: telebot.TeleBot, chat_id: int, text: str, parse_mode: str 
             logger.exception("Failed to send message to chat_id=%s", chat_id)
 
 
-def send_loading(bot: telebot.TeleBot, chat_id: int, label: str) -> None:
-    """Send a loading indicator and briefly pause so the Telegram client renders it before the bot continues."""
-    import time
-
-    bot.send_message(chat_id, f"\U0001f504 Loading {label}...")
-    time.sleep(0.4)
+def send_loading(bot: telebot.TeleBot, chat_id: int, label: str) -> telebot.types.Message:
+    """Send a loading indicator. Returns the message so it can be edited with the result."""
+    return bot.send_message(chat_id, f"\U0001f504 {label}...")
 
 
 def send_to_all(bot: telebot.TeleBot, config: AppConfig, text: str, parse_mode: str | None = None) -> None:

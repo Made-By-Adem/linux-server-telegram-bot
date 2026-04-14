@@ -146,9 +146,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
 
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, "Docker status")
-            _send_status(bot_inst, chat_id, config)
+            bot_inst.edit_message_text("\U0001f504 Docker status...", chat_id, call.message.message_id)
+            text = _get_status_text(config)
+            bot_inst.edit_message_text(text, chat_id, call.message.message_id, parse_mode="HTML")
             return
 
         # -- Policy management --
@@ -195,12 +195,13 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         # Execute single-container action
         if action in ("start", "stop", "restart") and target:
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, f"{action.capitalize()} {target}")
+            bot_inst.edit_message_text(
+                f"\U0001f504 {action.capitalize()}ing {target}...", chat_id, call.message.message_id
+            )
             result = container_action(action, target)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             msg = f"{icon} {action.capitalize()} {target}: {'OK' if result['success'] else result['error']}"
-            bot_inst.send_message(chat_id, msg)
+            bot_inst.edit_message_text(msg, chat_id, call.message.message_id)
             _send_status(bot_inst, chat_id, config)
             return
 
@@ -208,8 +209,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action in ("start_all", "stop_all", "restart_all"):
             real_action = action.replace("_all", "")
             safe_answer_callback_query(bot_inst, call.id)
-            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, f"{real_action.capitalize()} all containers")
+            bot_inst.edit_message_text(
+                f"\U0001f504 {real_action.capitalize()}ing all containers...", chat_id, call.message.message_id
+            )
             results = container_action_all(real_action, container_names)
             failures = [r for r in results if not r["success"]]
             if failures:
@@ -225,13 +227,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
-        send_loading(bot, message.chat.id, "Docker")
-        _send_status(bot, message.chat.id, config)
+        loading = send_loading(bot, message.chat.id, "Docker")
+        text = _get_status_text(config)
+        bot.edit_message_text(text, message.chat.id, loading.message_id, parse_mode="HTML")
         _send_docker_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
-        send_loading(bot, message.chat.id, "Docker")
-        _send_status(bot, message.chat.id, config)
-        _send_docker_menu(bot, message.chat.id)
+        handle_docker_menu(message)

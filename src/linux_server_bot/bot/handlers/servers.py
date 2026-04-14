@@ -68,8 +68,21 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 if server.name == target:
                     safe_answer_callback_query(bot_inst, call.id)
                     bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-                    send_loading(bot_inst, chat_id, f"Ping {target}")
-                    _do_ping(chat_id, server.name, server.host, server.port)
+                    loading = send_loading(bot_inst, chat_id, f"Pinging {target}")
+                    result = ping_server_with_retry(server.name, server.host, server.port)
+                    states = load_server_states(config.server_states_path)
+                    if result["status"] == "online":
+                        icon = "\u2705"
+                        bot_inst.edit_message_text(
+                            f"{icon} Server {server.name} is online.", chat_id, loading.message_id
+                        )
+                        states[server.name] = "online"
+                    else:
+                        bot_inst.edit_message_text(
+                            f"\u26a0\ufe0f Server {server.name} is offline!", chat_id, loading.message_id
+                        )
+                        states[server.name] = "offline"
+                    save_server_states(config.server_states_path, states)
                     return
             safe_answer_callback_query(bot_inst, call.id, f"Server '{target}' not found")
             return

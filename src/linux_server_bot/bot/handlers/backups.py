@@ -53,11 +53,14 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, "Backup")
+            loading = send_loading(bot_inst, chat_id, "Backup")
             result = trigger_backup(script)
-            output = result.get("output", "No output.")
-            for chunk_text in chunk_message(escape_html(output)):
-                bot_inst.send_message(chat_id, chunk_text)
+            output = escape_html(result.get("output", "No output."))
+            chunks = chunk_message(output)
+            if chunks:
+                bot_inst.edit_message_text(chunks[0], chat_id, loading.message_id)
+                for chunk_text in chunks[1:]:
+                    bot_inst.send_message(chat_id, chunk_text)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
             label = "Backup completed successfully." if result["success"] else "Backup finished with errors."
             bot_inst.send_message(chat_id, f"{icon} {label}")
@@ -66,21 +69,25 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, "Backup status")
+            loading = send_loading(bot_inst, chat_id, "Backup status")
             result = get_backup_status()
-            output = result.get("output", "No backup status available.")
-            for chunk_text in chunk_message(escape_html(output)):
-                bot_inst.send_message(chat_id, chunk_text, parse_mode=None)
+            output = escape_html(result.get("output", "No backup status available."))
+            chunks = chunk_message(output)
+            if chunks:
+                bot_inst.edit_message_text(chunks[0], chat_id, loading.message_id)
+                for chunk_text in chunks[1:]:
+                    bot_inst.send_message(chat_id, chunk_text, parse_mode=None)
             return
 
         if action == "size":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            send_loading(bot_inst, chat_id, "Backup size")
+            loading = send_loading(bot_inst, chat_id, "Backup size")
             result = get_backup_size()
-            bot_inst.send_message(
-                chat_id,
+            bot_inst.edit_message_text(
                 f"<b>Backup disk usage:</b>\n{escape_html(result.get('output', 'N/A'))}",
+                chat_id,
+                loading.message_id,
                 parse_mode="HTML",
             )
             return
