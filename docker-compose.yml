@@ -56,6 +56,8 @@ services:
     env_file: .env
     environment:
       CONFIG_PATH: /app/config.yaml
+    ports:
+      - "8120:8120"
     volumes:
       - ./.env:/app/.env
       - ./config.yaml:/app/config.yaml
@@ -65,7 +67,6 @@ services:
       - /opt/scripts:/opt/scripts:ro
       - /var/log:/var/log:ro
     restart: unless-stopped
-    network_mode: host
     pid: host
     privileged: true
     healthcheck:
