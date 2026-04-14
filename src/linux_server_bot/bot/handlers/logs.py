@@ -204,6 +204,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             log_path = cached[idx]
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, f"\U0001f504 Loading {escape_html(os.path.basename(log_path))}...")
             logger.info("User requested log: %s", log_path)
             _view_log(bot_inst, chat_id, log_path)
@@ -216,11 +217,13 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_LOGS)
     @authorized(config)
     def handle_logs_menu(message):
-        bot.send_message(message.chat.id, "\U0001f504 Loading Logs...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading Logs...")
         _send_logs_menu(message.chat.id)
 
     @bot.message_handler(commands=["logs"])
     @authorized(config)
     def handle_logs_command(message):
-        bot.send_message(message.chat.id, "\U0001f504 Loading Logs...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading Logs...")
         _send_logs_menu(message.chat.id)

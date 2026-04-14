@@ -20,7 +20,7 @@ def check_failed_logins(bot: telebot.TeleBot, config: AppConfig) -> None:
     """Alert on excessive failed login attempts in the last monitoring interval."""
     from linux_server_bot.shared.telegram import send_to_all
 
-    if not config.monitoring.security.get("check_ssh_sessions", True):
+    if not config.monitoring.security.get("check_failed_logins", True):
         return
 
     interval = config.monitoring.interval_minutes

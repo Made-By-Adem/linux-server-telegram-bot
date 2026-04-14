@@ -56,6 +56,11 @@ def main() -> None:
 
     setup_logging("api", config.log_directory)
 
+    if not config.api.enabled:
+        logger.info("API disabled in config")
+        print("API disabled in config.yaml. The Telegram bot and monitoring continue to work without it.")
+        return
+
     port = find_free_port(config.api.port)
     if port is None:
         logger.info("API skipped — no free port available")

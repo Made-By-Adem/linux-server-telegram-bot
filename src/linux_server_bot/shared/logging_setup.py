@@ -46,10 +46,9 @@ def setup_logging(name: str, log_directory: str = "./logs", level: int = logging
     file_handler.setFormatter(formatter)
     console_handler.setFormatter(formatter)
 
-    log_logger.addHandler(file_handler)
-    log_logger.addHandler(console_handler)
-
-    # Also configure root logger so library modules log properly
+    # Configure root logger so all modules (including libraries) log properly.
+    # The named logger inherits from root, so we don't add handlers to it
+    # directly -- that would cause duplicate lines.
     root = logging.getLogger()
     if not root.handlers:
         root.setLevel(level)

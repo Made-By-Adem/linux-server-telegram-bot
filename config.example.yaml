@@ -139,3 +139,4 @@ monitoring:
     check_fail2ban: true
     check_ufw: true
     check_ssh_sessions: true
+    check_failed_logins: true

@@ -53,6 +53,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, "\U0001f4be Starting backup (this may take a while)...")
             result = trigger_backup(script)
             output = result.get("output", "No output.")
@@ -66,6 +67,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, "\U0001f504 Checking backup status...")
             result = get_backup_status()
             output = result.get("output", "No backup status available.")
@@ -76,6 +78,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "size":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, "\U0001f504 Checking backup size...")
             result = get_backup_size()
             bot_inst.send_message(

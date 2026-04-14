@@ -52,6 +52,9 @@ def list_available_logs() -> list[dict]:
     return entries
 
 
+_MAX_TAIL = 500
+
+
 def read_log_tail(index: int, tail: int = 50) -> dict:
     """Read the last *tail* lines of log file at *index*.
 
@@ -60,6 +63,7 @@ def read_log_tail(index: int, tail: int = 50) -> dict:
     available = list_available_logs()
     if index < 0 or index >= len(available):
         return {"success": False, "error": f"Invalid log index: {index}"}
+    tail = max(1, min(tail, _MAX_TAIL))
     filepath = available[index]["path"]
     try:
         with open(filepath, errors="replace") as f:

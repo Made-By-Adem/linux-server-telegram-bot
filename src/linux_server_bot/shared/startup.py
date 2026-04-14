@@ -138,8 +138,13 @@ def _set_env_value(content: str, key: str, value: str) -> str:
     for i, line in enumerate(lines):
         stripped = line.split("#")[0].strip()
         if stripped.startswith(f"{key}="):
-            # Preserve any comment on the same line
-            lines[i] = f"{key}={value}\n"
+            # Preserve any inline comment
+            comment_idx = line.find("#")
+            if comment_idx > 0:
+                comment = "  " + line[comment_idx:].rstrip("\n")
+                lines[i] = f"{key}={value}{comment}\n"
+            else:
+                lines[i] = f"{key}={value}\n"
             replaced = True
             break
     if not replaced:

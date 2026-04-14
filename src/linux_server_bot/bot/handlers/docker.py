@@ -142,6 +142,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "status":
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, "\U0001f504 Fetching container status...")
             _send_status(bot_inst, chat_id, config)
             return
@@ -191,6 +192,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action in ("start", "stop", "restart") and target:
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, f"\U0001f504 {action.capitalize()}ing <b>{target}</b>...", parse_mode="HTML")
             result = container_action(action, target)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
@@ -204,6 +206,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             real_action = action.replace("_all", "")
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_chat_action(chat_id, "typing")
             bot_inst.send_message(chat_id, f"\U0001f504 {real_action.capitalize()}ing all containers...")
             results = container_action_all(real_action, container_names)
             failures = [r for r in results if not r["success"]]
@@ -220,13 +223,15 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
-        bot.send_message(message.chat.id, "\U0001f504 Loading Docker...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading Docker...")
         _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
-        bot.send_message(message.chat.id, "\U0001f504 Loading Docker...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading Docker...")
         _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)

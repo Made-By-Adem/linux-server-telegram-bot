@@ -50,6 +50,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "fail2ban":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_chat_action(chat_id, "typing")
         bot.send_message(chat_id, "\U0001f504 Checking fail2ban...")
         result = get_fail2ban_status()
         if result["available"]:
@@ -64,6 +65,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "ufw":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_chat_action(chat_id, "typing")
         bot.send_message(chat_id, "\U0001f504 Checking UFW...")
         result = get_ufw_status()
         text = "<b>UFW Status:</b>\n" + escape_html(result["status"])
@@ -74,6 +76,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "ssh":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_chat_action(chat_id, "typing")
         bot.send_message(chat_id, "\U0001f504 Checking SSH sessions...")
         result = get_ssh_sessions()
         text = "<b>Current sessions:</b>\n" + escape_html(result["current_sessions"])
@@ -86,6 +89,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "failed":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_chat_action(chat_id, "typing")
         bot.send_message(chat_id, "\U0001f504 Checking failed logins...")
         result = get_failed_logins()
         if result["found"]:
@@ -99,6 +103,7 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
     if action == "updates":
         safe_answer_callback_query(bot, call.id)
         bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_chat_action(chat_id, "typing")
         bot.send_message(chat_id, "\U0001f504 Checking available updates...")
         result = get_available_updates()
         if result["up_to_date"]:
@@ -120,11 +125,13 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_SECURITY)
     @authorized(config)
     def handle_security_menu(message):
-        bot.send_message(message.chat.id, "\U0001f504 Loading Security...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading Security...")
         _send_security_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["security"])
     @authorized(config)
     def handle_security_command(message):
-        bot.send_message(message.chat.id, "\U0001f504 Loading Security...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading Security...")
         _send_security_menu(bot, message.chat.id)

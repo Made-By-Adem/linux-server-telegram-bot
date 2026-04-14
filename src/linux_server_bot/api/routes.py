@@ -80,6 +80,11 @@ async def docker_status():
     return {"success": True, "data": [asdict(s) for s in filtered]}
 
 
+@router.post("/docker/cleanup")
+async def docker_cleanup():
+    return docker.docker_cleanup()
+
+
 @router.post("/docker/{action}/{name}")
 async def docker_action(action: str, name: str):
     if action not in ("start", "stop", "restart"):
@@ -95,11 +100,6 @@ async def docker_action_all(action: str):
     real_action = action.replace("_all", "")
     results = docker.container_action_all(real_action, config.get_container_names())
     return {"success": all(r["success"] for r in results), "data": results}
-
-
-@router.post("/docker/cleanup")
-async def docker_cleanup():
-    return docker.docker_cleanup()
 
 
 # ---------------------------------------------------------------------------

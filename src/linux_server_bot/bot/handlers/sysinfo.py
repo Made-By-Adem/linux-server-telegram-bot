@@ -130,7 +130,8 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @authorized(config)
     def handle_sysinfo(message):
         logger.info("User %s requested system info", message.from_user.first_name)
-        bot.send_message(message.chat.id, "\U0001f504 Loading System info...")
+        bot.send_chat_action(message.chat.id, "typing")
+        bot.reply_to(message, "\U0001f504 Loading System info...")
         text = get_sysinfo_text()
         if text.strip():
             output = "<b>System info:</b>\n" + escape_html(text)

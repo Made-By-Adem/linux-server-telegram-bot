@@ -22,7 +22,7 @@ from linux_server_bot.shared.startup import (
     run_preflight_checks,
     setup_graceful_shutdown,
 )
-from linux_server_bot.shared.telegram import create_bot
+from linux_server_bot.shared.telegram import create_bot, escape_html
 
 logger = logging.getLogger(__name__)
 
@@ -112,8 +112,9 @@ def main() -> None:
     @bot.message_handler(commands=["start"])
     @authorized(config)
     def handle_start(message):
+        name = escape_html(message.from_user.first_name or "")
         welcome = (
-            f"Hey {message.from_user.first_name}, I'm the Linux Server Bot.\n\n"
+            f"Hey {name}, I'm the Linux Server Bot.\n\n"
             "Hit /menu to see what I can do, or use the commands below:\n\n"
             "<b>Menu</b> - /menu\n"
             "<b>Start</b> - /start"

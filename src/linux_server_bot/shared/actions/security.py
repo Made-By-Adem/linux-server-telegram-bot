@@ -58,7 +58,10 @@ def get_available_updates() -> dict:
         "  sudo yum check-update 2>/dev/null;"
         "else echo 'Unsupported package manager'; fi"
     )
-    return {"output": result.stdout.strip(), "up_to_date": not bool(result.stdout.strip())}
+    output = result.stdout.strip()
+    # apt list --upgradable prints a "Listing..." header even when nothing is upgradable
+    upgrade_lines = [line for line in output.splitlines() if "/" in line]
+    return {"output": output, "up_to_date": len(upgrade_lines) == 0}
 
 
 def get_full_security_status() -> dict:
