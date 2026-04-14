@@ -19,17 +19,19 @@ _DEFAULT_TIMEOUT = 30
 
 # Commands whose binaries are installed in the Docker image and should NOT
 # be wrapped with nsenter.  Everything else gets nsenter in Docker mode.
-_CONTAINER_LOCAL_COMMANDS = frozenset({
-    "docker",
-    "nc",
-    "python",
-    "python3",
-    "pip",
-    "nsenter",
-    "curl",
-    "stress-ng",
-    "etherwake",
-})
+_CONTAINER_LOCAL_COMMANDS = frozenset(
+    {
+        "docker",
+        "nc",
+        "python",
+        "python3",
+        "pip",
+        "nsenter",
+        "curl",
+        "stress-ng",
+        "etherwake",
+    }
+)
 
 
 @lru_cache(maxsize=1)

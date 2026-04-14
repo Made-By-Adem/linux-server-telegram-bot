@@ -159,6 +159,7 @@ class CustomScript:
 
     name: str
     path: str
+    timeout: int = 300
 
 
 @dataclass
@@ -269,7 +270,7 @@ class AppConfig:
         # Scripts
         scripts = data.get("scripts", {})
         custom_scripts = [
-            CustomScript(name=s["name"], path=s["path"])
+            CustomScript(name=s["name"], path=s["path"], timeout=int(s.get("timeout", 300)))
             for s in scripts.get("custom", [])
             if isinstance(s, dict) and "name" in s and "path" in s
         ]

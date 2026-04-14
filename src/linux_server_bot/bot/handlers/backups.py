@@ -51,8 +51,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 safe_answer_callback_query(bot_inst, call.id, "Script not configured")
                 bot_inst.send_message(chat_id, "Backup script not configured in config.yaml (scripts.backup).")
                 return
-            safe_answer_callback_query(bot_inst, call.id, "Starting backup...")
-            bot_inst.send_message(chat_id, "Starting backup (this may take a while)...")
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_message(chat_id, "\U0001f4be Starting backup (this may take a while)...")
             result = trigger_backup(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -63,7 +64,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "status":
-            safe_answer_callback_query(bot_inst, call.id, "Checking status...")
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_message(chat_id, "\U0001f504 Checking backup status...")
             result = get_backup_status()
             output = result.get("output", "No backup status available.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -71,7 +74,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "size":
-            safe_answer_callback_query(bot_inst, call.id, "Checking size...")
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_message(chat_id, "\U0001f504 Checking backup size...")
             result = get_backup_size()
             bot_inst.send_message(
                 chat_id,

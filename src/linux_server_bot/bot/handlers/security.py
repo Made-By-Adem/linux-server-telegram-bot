@@ -48,7 +48,9 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "fail2ban":
-        safe_answer_callback_query(bot, call.id, "Checking fail2ban...")
+        safe_answer_callback_query(bot, call.id)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_message(chat_id, "\U0001f504 Checking fail2ban...")
         result = get_fail2ban_status()
         if result["available"]:
             text = "<b>Fail2ban Status:</b>\n" + escape_html(result["status"])
@@ -60,7 +62,9 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "ufw":
-        safe_answer_callback_query(bot, call.id, "Checking UFW...")
+        safe_answer_callback_query(bot, call.id)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_message(chat_id, "\U0001f504 Checking UFW...")
         result = get_ufw_status()
         text = "<b>UFW Status:</b>\n" + escape_html(result["status"])
         for chunk_text in chunk_message(text):
@@ -68,7 +72,9 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "ssh":
-        safe_answer_callback_query(bot, call.id, "Checking SSH sessions...")
+        safe_answer_callback_query(bot, call.id)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_message(chat_id, "\U0001f504 Checking SSH sessions...")
         result = get_ssh_sessions()
         text = "<b>Current sessions:</b>\n" + escape_html(result["current_sessions"])
         bot.send_message(chat_id, text, parse_mode="HTML")
@@ -78,7 +84,9 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "failed":
-        safe_answer_callback_query(bot, call.id, "Checking failed logins...")
+        safe_answer_callback_query(bot, call.id)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_message(chat_id, "\U0001f504 Checking failed logins...")
         result = get_failed_logins()
         if result["found"]:
             text = "<b>Recent failed logins:</b>\n" + escape_html(result["output"])
@@ -89,7 +97,9 @@ def _handle_callback(bot, call, parts: list[str]) -> None:
         return
 
     if action == "updates":
-        safe_answer_callback_query(bot, call.id, "Checking updates...")
+        safe_answer_callback_query(bot, call.id)
+        bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+        bot.send_message(chat_id, "\U0001f504 Checking available updates...")
         result = get_available_updates()
         if result["up_to_date"]:
             bot.send_message(chat_id, "System is up to date.")

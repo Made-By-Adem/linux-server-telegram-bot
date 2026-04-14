@@ -65,7 +65,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "ping" and target:
             for server in config.servers:
                 if server.name == target:
-                    safe_answer_callback_query(bot_inst, call.id, f"Pinging {target}...")
+                    safe_answer_callback_query(bot_inst, call.id)
+                    bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+                    bot_inst.send_message(chat_id, f"\U0001f504 Pinging {target}...")
                     _do_ping(chat_id, server.name, server.host, server.port)
                     return
             safe_answer_callback_query(bot_inst, call.id, f"Server '{target}' not found")

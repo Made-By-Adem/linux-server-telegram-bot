@@ -58,8 +58,8 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             msg = f"\U0001f504 Running <b>{escape_html(script.name)}</b>..."
             bot_inst.send_message(chat_id, msg, parse_mode="HTML")
 
-            logger.info("User running script: %s (%s)", script.name, script.path)
-            result = run_shell(script.path, timeout=120)
+            logger.info("User running script: %s (%s, timeout=%ds)", script.name, script.path, script.timeout)
+            result = run_shell(script.path, timeout=script.timeout)
             output = result.stdout or result.stderr
 
             if output.strip():

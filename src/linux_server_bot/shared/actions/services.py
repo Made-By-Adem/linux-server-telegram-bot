@@ -20,9 +20,7 @@ def _normalize_service_name(name: str) -> str:
 def _should_retry_with_sudo(result) -> bool:
     text = f"{result.stdout}\n{result.stderr}".lower()
     return (
-        "failed to connect to bus" in text
-        or "access denied" in text
-        or "interactive authentication required" in text
+        "failed to connect to bus" in text or "access denied" in text or "interactive authentication required" in text
     )
 
 

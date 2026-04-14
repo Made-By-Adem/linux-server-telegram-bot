@@ -1,4 +1,4 @@
-"""Server reboot and bot restart handler."""
+"""Server reboot and container restart handler."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from linux_server_bot.bot.callbacks import register_callback, safe_answer_callback_query
 from linux_server_bot.bot.menus import BTN_REBOOT, inline_action_keyboard, inline_confirm_keyboard
 from linux_server_bot.shared.auth import authorized
-from linux_server_bot.shared.shell import run_command, run_shell
+from linux_server_bot.shared.shell import run_command
 
 if TYPE_CHECKING:
     import telebot
@@ -17,14 +17,37 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# The three compose services that make up this application.
+_COMPOSE_SERVICES = ["bot", "monitoring", "api"]
+
 _ACTIONS = [
     ("\U0001f501 Reboot server", "reboot"),
-    ("\U0001f504 Restart bot", "restart_bot"),
+    ("\U0001f504 Restart all containers", "restart_all"),
+    ("\U0001f916 Restart bot", "restart_svc:bot"),
+    ("\U0001f4ca Restart monitoring", "restart_svc:monitoring"),
+    ("\U0001f310 Restart API", "restart_svc:api"),
 ]
 
 
+def _restart_compose_service(service: str, timeout: int = 60) -> dict:
+    """Restart a single compose service by finding its container via labels."""
+    # Find the container ID by compose service label
+    result = run_command(
+        ["docker", "ps", "-qf", f"label=com.docker.compose.service={service}"],
+        timeout=10,
+    )
+    container_id = result.stdout.strip()
+    if not container_id:
+        return {"success": False, "error": f"Container for service '{service}' not found"}
+    # Restart by container ID
+    result = run_command(["docker", "restart", container_id], timeout=timeout)
+    if result.success:
+        return {"success": True}
+    return {"success": False, "error": result.stderr.strip() or "Unknown error"}
+
+
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
-    """Register reboot and bot restart handlers."""
+    """Register reboot and container restart handlers."""
 
     def _handle_callback(bot_inst, call, parts: list[str]) -> None:
         action = parts[0] if parts else None
@@ -35,7 +58,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
             return
 
-        # "reboot:reboot:confirm" / "reboot:reboot:cancel"
+        # --- Server reboot ---
         if action == "reboot" and len(parts) > 1:
             if parts[1] == "confirm":
                 safe_answer_callback_query(bot_inst, call.id, "Rebooting...")
@@ -49,7 +72,6 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 return
 
-        # Show reboot confirmation
         if action == "reboot" and len(parts) == 1:
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
@@ -57,30 +79,77 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             bot_inst.send_message(chat_id, "Are you sure you want to reboot the server?", reply_markup=markup)
             return
 
-        # "reboot:restart_bot:confirm" / "reboot:restart_bot:cancel"
-        if action == "restart_bot" and len(parts) > 1:
+        # --- Restart all containers ---
+        if action == "restart_all" and len(parts) > 1:
             if parts[1] == "confirm":
-                safe_answer_callback_query(bot_inst, call.id, "Restarting bot...")
+                safe_answer_callback_query(bot_inst, call.id, "Restarting...")
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-                logger.info("User confirmed bot restart")
-                bot_inst.send_message(chat_id, "\U0001f504 Restarting bot containers... I'll be back in a moment.")
-                # Use docker compose to restart all 3 bot containers
-                run_shell("docker compose restart", timeout=60)
+                logger.info("User confirmed restart of all containers")
+                bot_inst.send_message(
+                    chat_id,
+                    "\U0001f504 Restarting all containers (bot, monitoring, API)... I'll be back in a moment.",
+                )
+                for svc in _COMPOSE_SERVICES:
+                    if svc == "bot":
+                        continue  # restart bot last so the message is sent
+                    _restart_compose_service(svc)
+                _restart_compose_service("bot")
                 return
             if parts[1] == "cancel":
                 safe_answer_callback_query(bot_inst, call.id, "Cancelled")
                 bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
                 return
 
-        # Show bot restart confirmation
-        if action == "restart_bot" and len(parts) == 1:
+        if action == "restart_all" and len(parts) == 1:
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            markup = inline_confirm_keyboard("reboot", "restart_bot")
+            markup = inline_confirm_keyboard("reboot", "restart_all")
             bot_inst.send_message(
                 chat_id,
-                "Restart all bot containers (bot, monitoring, API)?",
+                "Restart all containers (bot, monitoring, API)?",
                 reply_markup=markup,
+            )
+            return
+
+        # --- Restart individual container ---
+        if action == "restart_svc":
+            service = parts[1] if len(parts) > 1 else None
+            confirm = parts[2] if len(parts) > 2 else None
+
+            if not service or service not in _COMPOSE_SERVICES:
+                safe_answer_callback_query(bot_inst, call.id, "Unknown service")
+                return
+
+            if confirm == "confirm":
+                safe_answer_callback_query(bot_inst, call.id, f"Restarting {service}...")
+                bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+                logger.info("User confirmed restart of %s", service)
+                bot_inst.send_message(chat_id, f"\U0001f504 Restarting <b>{service}</b>...", parse_mode="HTML")
+                result = _restart_compose_service(service)
+                if result["success"]:
+                    if service != "bot":
+                        bot_inst.send_message(chat_id, f"\u2705 <b>{service}</b> restarted.", parse_mode="HTML")
+                else:
+                    bot_inst.send_message(
+                        chat_id,
+                        f"\u26a0\ufe0f Failed to restart <b>{service}</b>: {result['error']}",
+                        parse_mode="HTML",
+                    )
+                return
+            if confirm == "cancel":
+                safe_answer_callback_query(bot_inst, call.id, "Cancelled")
+                bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+                return
+
+            # Show confirmation
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            markup = inline_confirm_keyboard("reboot", f"restart_svc:{service}")
+            bot_inst.send_message(
+                chat_id,
+                f"Restart the <b>{service}</b> container?",
+                reply_markup=markup,
+                parse_mode="HTML",
             )
             return
 

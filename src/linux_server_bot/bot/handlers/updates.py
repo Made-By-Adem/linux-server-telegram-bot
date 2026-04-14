@@ -56,7 +56,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "dry_run":
-            safe_answer_callback_query(bot_inst, call.id, "Running dry-run...")
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_message(chat_id, "\U0001f50d Running dry-run...")
             result = dry_run_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -64,8 +66,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "run":
-            safe_answer_callback_query(bot_inst, call.id, "Starting updates...")
-            bot_inst.send_message(chat_id, "Starting container updates (this may take a while)...")
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_message(chat_id, "\U0001f504 Starting container updates (this may take a while)...")
             result = trigger_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):
@@ -76,7 +79,9 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "rollback":
-            safe_answer_callback_query(bot_inst, call.id, "Rolling back...")
+            safe_answer_callback_query(bot_inst, call.id)
+            bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
+            bot_inst.send_message(chat_id, "\u21a9\ufe0f Rolling back...")
             result = rollback_updates(script)
             output = result.get("output", "No output.")
             for chunk_text in chunk_message(escape_html(output)):

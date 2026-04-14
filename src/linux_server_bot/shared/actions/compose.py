@@ -16,10 +16,7 @@ logger = logging.getLogger(__name__)
 def _looks_like_missing_compose_v2(result) -> bool:
     """Detect cases where ``docker compose`` is unavailable/incompatible."""
     error_text = (result.stderr or "").lower()
-    return (
-        "unknown shorthand flag: 'f' in -f" in error_text
-        or "'compose' is not a docker command" in error_text
-    )
+    return "unknown shorthand flag: 'f' in -f" in error_text or "'compose' is not a docker command" in error_text
 
 
 def _compose_cmd(path: str, args: list[str], timeout: int = 120):
