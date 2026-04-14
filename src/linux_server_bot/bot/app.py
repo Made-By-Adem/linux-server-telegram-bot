@@ -68,46 +68,72 @@ def _start_health_thread():
     t.start()
 
 
-_STACK_CONTAINERS = frozenset(
-    {
-        "linux-server-bot",
-        "linux-server-monitoring",
-        "linux-server-api",
-    }
-)
-
 _HEALTH_POLL_INTERVAL = 5  # seconds between polls
 _HEALTH_POLL_TIMEOUT = 300  # give up after 5 minutes
 
 
-def _all_containers_healthy() -> bool:
-    """Return True when every container in the stack reports ``(healthy)``."""
+def _get_compose_project() -> str | None:
+    """Return the Compose project name for this container, or *None*."""
     from linux_server_bot.shared.shell import run_command
 
+    # The bot's own container knows its compose project via its label.
     result = run_command(
-        ["docker", "ps", "--format", "{{.Names}}\t{{.Status}}"],
+        [
+            "docker",
+            "inspect",
+            "--format",
+            '{{index .Config.Labels "com.docker.compose.project"}}',
+            "linux-server-bot",
+        ],
+        timeout=10,
+    )
+    if result.success and result.stdout.strip():
+        return result.stdout.strip()
+    return None
+
+
+def _all_compose_containers_healthy() -> bool:
+    """Return True when every container in *this* Compose project is healthy."""
+    from linux_server_bot.shared.shell import run_command
+
+    project = _get_compose_project()
+    if project is None:
+        return False
+
+    # List only containers belonging to the same docker-compose project.
+    result = run_command(
+        [
+            "docker",
+            "ps",
+            "-a",
+            "--filter",
+            f"label=com.docker.compose.project={project}",
+            "--format",
+            "{{.Names}}\t{{.Status}}",
+        ],
         timeout=10,
     )
     if not result.success:
         return False
 
-    healthy_containers: set[str] = set()
-    for line in result.stdout.strip().splitlines():
-        parts = line.split("\t", 1)
-        if len(parts) == 2 and "(healthy)" in parts[1]:
-            healthy_containers.add(parts[0])
+    lines = [ln for ln in result.stdout.strip().splitlines() if ln]
+    if not lines:
+        return False
 
-    return _STACK_CONTAINERS.issubset(healthy_containers)
+    return all("(healthy)" in line for line in lines)
 
 
-def _send_startup_message_when_ready(bot) -> None:
-    """Background thread that waits for all containers to be healthy, then notifies users."""
+def _send_startup_message_when_ready(bot, warmup_thread) -> None:
+    """Background thread: waits for warmup + all containers healthy, then notifies."""
     import threading
 
     def _wait_and_send():
+        # Wait for shell warmup so the first user interaction is fast.
+        warmup_thread.join(timeout=_HEALTH_POLL_TIMEOUT)
+
         deadline = time.time() + _HEALTH_POLL_TIMEOUT
         while time.time() < deadline:
-            if _all_containers_healthy():
+            if _all_compose_containers_healthy():
                 for chat_id in config.allowed_users:
                     try:
                         bot.send_message(chat_id, "\u2705 Bot is online and ready.")
@@ -210,8 +236,8 @@ def main() -> None:
     logger.info("Bot running...")
     _start_health_thread()
 
-    # Notify all users once every container in the stack is healthy.
-    _send_startup_message_when_ready(bot)
+    # Notify all users once warmup is done and every container is healthy.
+    _send_startup_message_when_ready(bot, warmup_thread)
 
     bot.infinity_polling(timeout=30, long_polling_timeout=30)
 
