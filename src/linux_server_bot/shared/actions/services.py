@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from dataclasses import dataclass
 
 from linux_server_bot.shared.shell import run_command
 
 logger = logging.getLogger(__name__)
+
+# Short-lived cache so pre-warm results survive until the first user tap.
+_CACHE_TTL = 30  # seconds
+_status_cache: dict | None = None  # {tuple(service_names): list[ServiceStatus]}
+_status_cache_time: float = 0.0
+_status_cache_lock = threading.Lock()
 
 
 def _normalize_service_name(name: str) -> str:
@@ -106,10 +114,40 @@ def get_service_status(name: str) -> ServiceStatus:
     return ServiceStatus(name=norm_name, state=state, active=state == "active")
 
 
+def invalidate_status_cache() -> None:
+    """Clear the service status cache (call after start/stop/restart)."""
+    global _status_cache, _status_cache_time
+    with _status_cache_lock:
+        _status_cache = None
+        _status_cache_time = 0.0
+
+
 def get_service_statuses(services: list[str]) -> list[ServiceStatus]:
-    """Get status of all configured services."""
+    """Get status of all configured services.
+
+    Results are cached for up to ``_CACHE_TTL`` seconds so that the pre-warm
+    at startup can serve the first user tap instantly.
+    """
+    global _status_cache, _status_cache_time
+
     normalized = sorted({_normalize_service_name(s) for s in services})
-    return [get_service_status(s) for s in normalized]
+    cache_key = tuple(normalized)
+
+    with _status_cache_lock:
+        if (
+            _status_cache is not None
+            and _status_cache.get("key") == cache_key
+            and (time.time() - _status_cache_time) < _CACHE_TTL
+        ):
+            return list(_status_cache["data"])
+
+    result = [get_service_status(s) for s in normalized]
+
+    with _status_cache_lock:
+        _status_cache = {"key": cache_key, "data": list(result)}
+        _status_cache_time = time.time()
+
+    return result
 
 
 def service_action(action: str, name: str) -> dict:
@@ -117,6 +155,7 @@ def service_action(action: str, name: str) -> dict:
     norm_name = _normalize_service_name(name)
     logger.info("Systemctl %s: %s", action, norm_name)
     result = _run_systemctl([action, norm_name])
+    invalidate_status_cache()
     return {
         "name": norm_name,
         "action": action,
