@@ -160,8 +160,12 @@ def _send_startup_message_when_ready(bot, warmup_thread) -> None:
         deadline = time.time() + _HEALTH_POLL_TIMEOUT
         while time.time() < deadline:
             if _all_compose_containers_healthy():
-                # Pre-warm the actual handler queries before announcing ready.
+                # Pre-warm the actual handler queries so first tap is instant.
                 _pre_warm_handlers()
+
+                # Give remaining subsystems (dbus, journald, apt cache, etc.)
+                # time to settle before we tell the user we're ready.
+                time.sleep(15)
 
                 for chat_id in config.allowed_users:
                     try:
