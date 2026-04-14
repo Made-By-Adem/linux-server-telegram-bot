@@ -188,12 +188,13 @@ def warmup() -> None:
     _in_docker()
     _nsenter_available()
 
-    # Warm up Docker CLI / daemon socket connection
+    # Warm up Docker CLI + daemon with the exact commands handlers use
     run_command(["docker", "info", "-f", "{{.ID}}"], timeout=15)
+    run_command(["docker", "ps", "-a", "--format", "{{.Names}}"], timeout=15)
 
-    # Warm up nsenter path (used by systemctl, journalctl, fail2ban, etc.)
+    # Warm up nsenter + systemctl path (first call through nsenter is slow)
     if _nsenter_available():
-        run_command(["true"], timeout=5)
+        run_command(["systemctl", "is-active", "docker"], timeout=10)
 
     logger.debug("Shell warmup complete")
 
