@@ -220,11 +220,13 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     @bot.message_handler(func=lambda m: m.text == BTN_DOCKER)
     @authorized(config)
     def handle_docker_menu(message):
+        bot.send_message(message.chat.id, "\U0001f504 Loading Docker...")
         _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)
 
     @bot.message_handler(commands=["docker"])
     @authorized(config)
     def handle_docker_command(message):
+        bot.send_message(message.chat.id, "\U0001f504 Loading Docker...")
         _send_status(bot, message.chat.id, config)
         _send_docker_menu(bot, message.chat.id)
