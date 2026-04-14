@@ -6,7 +6,9 @@ import html
 import logging
 from typing import TYPE_CHECKING
 
+import requests
 import telebot
+import telebot.apihelper
 
 if TYPE_CHECKING:
     from linux_server_bot.config import AppConfig
@@ -14,6 +16,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _MAX_MESSAGE_LENGTH = 4000  # Telegram limit is 4096, leave margin
+
+# Force a single shared requests.Session across all threads.
+# Without this, telebot uses thread-local sessions and each new worker
+# thread pays a full TCP+TLS handshake (~15 s on slow DNS servers).
+telebot.apihelper.session = requests.Session()
 
 
 def create_bot(token: str) -> telebot.TeleBot:
