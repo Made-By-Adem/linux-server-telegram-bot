@@ -55,14 +55,21 @@ def _write_health_check():
         pass
 
 
-def _start_health_thread():
-    """Background thread that updates the health file every 60 seconds."""
+def _start_health_thread(bot=None):
+    """Background thread: Docker health file + Telegram connection keepalive."""
     import threading
 
     def _loop():
         while True:
             _write_health_check()
-            time.sleep(60)
+            # Keep the Telegram HTTP connection pool warm so the first
+            # user interaction doesn't pay a ~15 s TLS reconnect penalty.
+            if bot is not None:
+                try:
+                    bot.get_me()
+                except Exception:
+                    pass
+            time.sleep(10)
 
     t = threading.Thread(target=_loop, daemon=True)
     t.start()
@@ -300,7 +307,7 @@ def main() -> None:
             return
         bot.reply_to(message, "I'm sorry, I don't understand that command.")
 
-    _start_health_thread()
+    _start_health_thread(bot)
     logger.info("[boot] health thread started (%.1fs)", time.monotonic() - boot_t0)
 
     # Notify all users once warmup is done and every container is healthy.
