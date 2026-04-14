@@ -68,6 +68,59 @@ def _start_health_thread():
     t.start()
 
 
+_STACK_CONTAINERS = frozenset(
+    {
+        "linux-server-bot",
+        "linux-server-monitoring",
+        "linux-server-api",
+    }
+)
+
+_HEALTH_POLL_INTERVAL = 5  # seconds between polls
+_HEALTH_POLL_TIMEOUT = 300  # give up after 5 minutes
+
+
+def _all_containers_healthy() -> bool:
+    """Return True when every container in the stack reports ``(healthy)``."""
+    from linux_server_bot.shared.shell import run_command
+
+    result = run_command(
+        ["docker", "ps", "--format", "{{.Names}}\t{{.Status}}"],
+        timeout=10,
+    )
+    if not result.success:
+        return False
+
+    healthy_containers: set[str] = set()
+    for line in result.stdout.strip().splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) == 2 and "(healthy)" in parts[1]:
+            healthy_containers.add(parts[0])
+
+    return _STACK_CONTAINERS.issubset(healthy_containers)
+
+
+def _send_startup_message_when_ready(bot) -> None:
+    """Background thread that waits for all containers to be healthy, then notifies users."""
+    import threading
+
+    def _wait_and_send():
+        deadline = time.time() + _HEALTH_POLL_TIMEOUT
+        while time.time() < deadline:
+            if _all_containers_healthy():
+                for chat_id in config.allowed_users:
+                    try:
+                        bot.send_message(chat_id, "\u2705 Bot is online and ready.")
+                    except Exception:
+                        logger.warning("Could not send startup message to chat_id=%s", chat_id)
+                return
+            time.sleep(_HEALTH_POLL_INTERVAL)
+        logger.warning("Timed out waiting for all containers to become healthy")
+
+    t = threading.Thread(target=_wait_and_send, daemon=True)
+    t.start()
+
+
 def main() -> None:
     """Main entry point for the bot."""
     load_dotenv()
@@ -157,12 +210,8 @@ def main() -> None:
     logger.info("Bot running...")
     _start_health_thread()
 
-    # Notify all users that the bot is ready
-    for chat_id in config.allowed_users:
-        try:
-            bot.send_message(chat_id, "\u2705 Bot is online and ready.")
-        except Exception:
-            logger.warning("Could not send startup message to chat_id=%s", chat_id)
+    # Notify all users once every container in the stack is healthy.
+    _send_startup_message_when_ready(bot)
 
     bot.infinity_polling(timeout=30, long_polling_timeout=30)
 
