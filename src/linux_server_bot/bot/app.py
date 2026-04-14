@@ -96,8 +96,13 @@ def main() -> None:
     # Startup banner
     print_banner("Bot", config)
 
-    # Warm up shell detection + Docker CLI so the first user command is fast
-    shell_warmup()
+    # Warm up shell detection + Docker CLI in a background thread so the bot
+    # starts accepting messages immediately instead of blocking on cold-start
+    # commands (nsenter, docker info, systemctl, …).
+    import threading
+
+    warmup_thread = threading.Thread(target=shell_warmup, daemon=True, name="shell-warmup")
+    warmup_thread.start()
 
     # Create bot
     bot = create_bot(config.bot_token)
