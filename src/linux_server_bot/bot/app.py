@@ -123,6 +123,32 @@ def _all_compose_containers_healthy() -> bool:
     return all("(healthy)" in line for line in lines)
 
 
+def _pre_warm_handlers() -> None:
+    """Run the same queries the menu buttons do, so first user tap is instant."""
+    import concurrent.futures
+
+    from linux_server_bot.shared.actions.docker import get_container_statuses
+    from linux_server_bot.shared.actions.services import get_service_statuses
+
+    service_names = config.get_service_names()
+
+    tasks: list[tuple[str, callable, list]] = [
+        ("docker statuses", get_container_statuses, []),
+        ("service statuses", get_service_statuses, [service_names]),
+    ]
+
+    def _run(task):
+        label, fn, args = task
+        try:
+            fn(*args)
+            logger.debug("Pre-warm %s done", label)
+        except Exception:
+            logger.debug("Pre-warm %s failed (non-fatal)", label)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(tasks)) as pool:
+        list(pool.map(_run, tasks))
+
+
 def _send_startup_message_when_ready(bot, warmup_thread) -> None:
     """Background thread: waits for warmup + all containers healthy, then notifies."""
     import threading
@@ -134,6 +160,9 @@ def _send_startup_message_when_ready(bot, warmup_thread) -> None:
         deadline = time.time() + _HEALTH_POLL_TIMEOUT
         while time.time() < deadline:
             if _all_compose_containers_healthy():
+                # Pre-warm the actual handler queries before announcing ready.
+                _pre_warm_handlers()
+
                 for chat_id in config.allowed_users:
                     try:
                         bot.send_message(chat_id, "\u2705 Bot is online and ready.")
