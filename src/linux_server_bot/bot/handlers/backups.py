@@ -22,8 +22,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_ACTIONS = [
-    ("\u25b6\ufe0f Start backup", "trigger"),
+_STATIC_ACTIONS = [
     ("\U0001f4cb Status", "status"),
     ("\U0001f4c0 Size", "size"),
 ]
@@ -32,8 +31,19 @@ _ACTIONS = [
 def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register backup handlers."""
 
+    def _build_actions() -> list[tuple[str, str]]:
+        backup = config.scripts.backup
+        actions: list[tuple[str, str]] = []
+        if backup.targets:
+            for tgt in backup.targets:
+                actions.append((f"\u25b6\ufe0f Backup {tgt}", f"trigger:{tgt}"))
+        else:
+            actions.append(("\u25b6\ufe0f Start backup", "trigger"))
+        actions.extend(_STATIC_ACTIONS)
+        return actions
+
     def _send_backups_menu(chat_id: int) -> None:
-        markup = inline_action_keyboard("backups", _ACTIONS, row_width=3)
+        markup = inline_action_keyboard("backups", _build_actions(), row_width=3)
         bot.send_message(chat_id, "Backup management:", reply_markup=markup)
 
     def _handle_callback(bot_inst, call, parts: list[str]) -> None:
@@ -46,15 +56,21 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         if action == "trigger":
-            script = config.scripts.backup
-            if not script:
+            backup = config.scripts.backup
+            if not backup.path:
                 safe_answer_callback_query(bot_inst, call.id, "Script not configured")
                 bot_inst.send_message(chat_id, "Backup script not configured in config.yaml (scripts.backup).")
                 return
+            target = parts[1] if len(parts) > 1 else None
+            # Only accept targets that are in the configured allow-list.
+            if target and target not in backup.targets:
+                safe_answer_callback_query(bot_inst, call.id, "Invalid target")
+                return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
-            loading = send_loading(bot_inst, chat_id, "Backup")
-            result = trigger_backup(script)
+            loading_label = f"Backup {target}" if target else "Backup"
+            loading = send_loading(bot_inst, chat_id, loading_label)
+            result = trigger_backup(backup.path, target)
             output = escape_html(result.get("output", "No output."))
             chunks = chunk_message(output)
             if chunks:
@@ -62,7 +78,12 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                 for chunk_text in chunks[1:]:
                     bot_inst.send_message(chat_id, chunk_text)
             icon = "\u2705" if result["success"] else "\u26a0\ufe0f"
-            label = "Backup completed successfully." if result["success"] else "Backup finished with errors."
+            suffix = f" ({target})" if target else ""
+            label = (
+                f"Backup{suffix} completed successfully."
+                if result["success"]
+                else f"Backup{suffix} finished with errors."
+            )
             bot_inst.send_message(chat_id, f"{icon} {label}")
             return
 

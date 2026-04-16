@@ -240,7 +240,18 @@ Point to your update and backup scripts. If you followed the [linux-server-manag
 ```yaml
 scripts:
   update_containers: /usr/local/bin/update-containers
-  backup: /usr/local/bin/backup
+  # Simple form (no arguments):
+  backup: /usr/local/bin/backup-folders
+```
+
+Or, to pass a positional argument (one sub-button per target, e.g. `backup-folders ac3`):
+
+```yaml
+scripts:
+  update_containers: /usr/local/bin/update-containers
+  backup:
+    path: /usr/local/bin/backup-folders
+    targets: [ac1, ac2, ac3]
 ```
 
 #### Monitoring thresholds

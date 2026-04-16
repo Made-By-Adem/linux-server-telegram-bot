@@ -163,9 +163,22 @@ class CustomScript:
 
 
 @dataclass
+class BackupConfig:
+    """Backup script configuration.
+
+    ``targets`` is an optional list of arguments passed as a single positional
+    parameter to the backup script. When non-empty, the bot renders one
+    sub-button per target (e.g. ``Backup ac1`` runs ``<path> ac1``).
+    """
+
+    path: str = ""
+    targets: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ScriptsConfig:
     update_containers: str = ""
-    backup: str = ""
+    backup: BackupConfig = field(default_factory=BackupConfig)
     custom: list[CustomScript] = field(default_factory=list)
 
 
@@ -284,9 +297,19 @@ class AppConfig:
             for s in scripts.get("custom", [])
             if isinstance(s, dict) and "name" in s and "path" in s
         ]
+        # Backup config accepts either a plain path string (legacy) or a dict
+        # with ``path`` and optional ``targets`` list.
+        raw_backup = scripts.get("backup", "")
+        if isinstance(raw_backup, dict):
+            backup_cfg = BackupConfig(
+                path=str(raw_backup.get("path", "")),
+                targets=[str(t) for t in (raw_backup.get("targets") or []) if t],
+            )
+        else:
+            backup_cfg = BackupConfig(path=str(raw_backup))
         self.scripts = ScriptsConfig(
             update_containers=str(scripts.get("update_containers", "")),
-            backup=str(scripts.get("backup", "")),
+            backup=backup_cfg,
             custom=custom_scripts,
         )
 

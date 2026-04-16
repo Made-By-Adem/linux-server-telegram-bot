@@ -142,7 +142,7 @@ All endpoints return JSON with a `success` boolean:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/backups/trigger` | Start backup |
+| POST | `/api/backups/trigger` | Start backup. Optional `?target=<name>` passes a positional arg (e.g. `?target=ac3` runs `backup-folders ac3`); target must be in `scripts.backup.targets` |
 | GET | `/api/backups/status` | Backup status |
 | GET | `/api/backups/size` | Backup disk usage |
 

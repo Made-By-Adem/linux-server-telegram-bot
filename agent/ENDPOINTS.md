@@ -475,6 +475,11 @@ Requires `scripts.backup` to be configured in config.yaml (path to [backup.sh](h
 
 ### `POST /api/backups/trigger`
 
+Optional query param `target` passes a single positional argument to the
+backup script (e.g. `POST /api/backups/trigger?target=ac1` runs
+`backup-folders ac1`). The target must be listed in `scripts.backup.targets`;
+otherwise the call is rejected.
+
 ```json
 {"success": true, "output": "Backup started...\nSyncing /opt/docker/... done"}
 ```

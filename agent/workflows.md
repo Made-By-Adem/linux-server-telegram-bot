@@ -132,6 +132,9 @@ curl -s -H "X-API-Key: $KEY" $URL/backups/size
 
 # 3. Trigger a new backup
 curl -s -X POST -H "X-API-Key: $KEY" $URL/backups/trigger
+
+# 3b. Trigger a backup for a specific target (if configured in scripts.backup.targets)
+curl -s -X POST -H "X-API-Key: $KEY" "$URL/backups/trigger?target=ac3"
 ```
 
 ---

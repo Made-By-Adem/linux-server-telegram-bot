@@ -359,11 +359,13 @@ async def updates_rollback():
 
 
 @router.post("/backups/trigger")
-async def backups_trigger():
-    script = config.scripts.backup
-    if not script:
+async def backups_trigger(target: str | None = None):
+    backup = config.scripts.backup
+    if not backup.path:
         return {"success": False, "error": "Backup script not configured"}
-    return backups.trigger_backup(script)
+    if target and target not in backup.targets:
+        return {"success": False, "error": f"Target '{target}' not in configured targets"}
+    return backups.trigger_backup(backup.path, target)
 
 
 @router.get("/backups/status")

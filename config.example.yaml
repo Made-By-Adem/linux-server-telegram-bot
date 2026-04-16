@@ -123,12 +123,28 @@ logfiles:
 # External script paths
 scripts:
   update_containers: /usr/local/bin/update-containers
-  backup: /usr/local/bin/backup
+  # Backup script. Two supported forms:
+  #   1. Simple path (no arguments):
+  #        backup: /usr/local/bin/backup-folders
+  #   2. Path + targets -- renders one sub-button per target; the target is
+  #      passed as a single positional argument (e.g. `backup-folders ac1`):
+  backup:
+    path: /usr/local/bin/backup-folders
+    targets:
+      - ac1
+      - ac2
+      - ac3
   # Custom scripts. Optional 'timeout' in seconds (default: 300).
-  # custom:
-  #   - name: rkhunter
-  #     path: /opt/scripts/rkhunter-scan.sh
-  #     timeout: 600
+  custom:
+    - name: rkhunter
+      path: /usr/local/bin/rkhunter-telegram.sh
+      timeout: 600
+    - name: AIDE
+      path: /usr/local/bin/aide-telegram.sh
+      timeout: 600
+    - name: Lynis
+      path: /usr/local/bin/lynis-telegram.sh
+      timeout: 600
 
 # Path to shared server states file (used by both bot and monitoring)
 server_states_path: server_states.json

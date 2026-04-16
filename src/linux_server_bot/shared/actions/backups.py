@@ -3,16 +3,21 @@
 from __future__ import annotations
 
 import logging
+import shlex
 
 from linux_server_bot.shared.shell import run_shell
 
 logger = logging.getLogger(__name__)
 
 
-def trigger_backup(script_path: str) -> dict:
-    """Run the backup script."""
-    logger.info("Triggering backup: %s", script_path)
-    result = run_shell(f"sudo {script_path} 2>&1", timeout=600)
+def trigger_backup(script_path: str, target: str | None = None) -> dict:
+    """Run the backup script, optionally with a single positional argument."""
+    cmd = f"sudo {shlex.quote(script_path)}"
+    if target:
+        cmd += f" {shlex.quote(target)}"
+    cmd += " 2>&1"
+    logger.info("Triggering backup: %s", cmd)
+    result = run_shell(cmd, timeout=600)
     return {"success": result.success, "output": result.stdout or result.stderr}
 
 
