@@ -30,7 +30,8 @@ _FAN_ACTIONS = [
 _THRESHOLD_LABELS = {
     "cpu_percent": ("\U0001f5a5 CPU", "%"),
     "storage_percent": ("\U0001f4be Disk", "%"),
-    "temperature_celsius": ("\U0001f321\ufe0f Temp", "\u00b0C"),
+    "temperature_celsius": ("\U0001f321️ Temp", "°C"),
+    "recheck_delay_seconds": ("⏱ Recheck delay", "s"),
 }
 
 
@@ -63,7 +64,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
                     callback_data=f"sysinfo:threshold_pick:{key}",
                 )
             )
-        markup.add(types.InlineKeyboardButton("\u274c Cancel", callback_data="sysinfo:cancel"))
+        markup.add(types.InlineKeyboardButton("❌ Cancel", callback_data="sysinfo:cancel"))
 
         bot_inst.send_message(
             chat_id,
@@ -84,7 +85,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "fan_off":
             safe_answer_callback_query(bot_inst, call.id, "Setting fans off...")
             result = set_fan_state(0)
-            icon = "\U0001f4a8" if result["success"] else "\u26a0\ufe0f"
+            icon = "\U0001f4a8" if result["success"] else "⚠️"
             msg = "Fans state changed to 0: Off (automatic)." if result["success"] else f"Failed: {result['error']}"
             bot_inst.send_message(chat_id, f"{icon} {msg}")
             return
@@ -92,7 +93,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
         if action == "fan_on":
             safe_answer_callback_query(bot_inst, call.id, "Setting fans on...")
             result = set_fan_state(1)
-            icon = "\U0001f4a8" if result["success"] else "\u26a0\ufe0f"
+            icon = "\U0001f4a8" if result["success"] else "⚠️"
             msg = "Fans state changed to 1: On." if result["success"] else f"Failed: {result['error']}"
             bot_inst.send_message(chat_id, f"{icon} {msg}")
             return
@@ -185,7 +186,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             label, unit = _THRESHOLD_LABELS[key]
             bot.send_message(
                 message.chat.id,
-                f"\u2705 {label} threshold set to <b>{value}{unit}</b>.",
+                f"✅ {label} threshold set to <b>{value}{unit}</b>.",
                 parse_mode="HTML",
             )
         except Exception as e:

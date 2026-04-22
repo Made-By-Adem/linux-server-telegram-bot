@@ -108,6 +108,7 @@ class MonitoringConfig:
             "cpu_percent": 80,
             "storage_percent": 90,
             "temperature_celsius": 50,
+            "recheck_delay_seconds": 5,
         }
     )
     security: dict[str, bool] = field(
@@ -532,6 +533,7 @@ THRESHOLD_KEYS = {
     "cpu_percent": (1, 100),
     "storage_percent": (1, 100),
     "temperature_celsius": (1, 150),
+    "recheck_delay_seconds": (1, 60),
 }
 
 

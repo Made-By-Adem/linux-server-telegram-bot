@@ -168,6 +168,7 @@ monitoring:
     cpu_percent: 80
     storage_percent: 90
     temperature_celsius: 50
+    recheck_delay_seconds: 5
 
   security:
     check_fail2ban: true

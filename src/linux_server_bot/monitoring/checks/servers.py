@@ -76,8 +76,8 @@ def check_servers(bot: telebot.TeleBot, config: AppConfig) -> None:
             if previous.get(name) in ("offline", "unknown"):
                 send_to_all(bot, config, f"\u2705 Server {name} is back online.")
         else:
-            # Retry with longer timeout
-            time.sleep(5)
+            delay = int(config.monitoring.thresholds.get("recheck_delay_seconds", 5))
+            time.sleep(delay)
             if _ping(host, port, timeout=10):
                 current[name] = "online"
                 if previous.get(name) in ("offline", "unknown"):

@@ -40,8 +40,8 @@ def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
     if usage <= threshold:
         return
 
-    # Double-check after 5 seconds
-    time.sleep(5)
+    delay = int(config.monitoring.thresholds.get("recheck_delay_seconds", 5))
+    time.sleep(delay)
     usage2 = _get_cpu_usage()
     if usage2 is None or usage2 <= threshold:
         return
@@ -54,7 +54,7 @@ def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
         bot,
         config,
         f"\U0001f525 CPU usage is high (>{threshold}%). "
-        f"First: {usage:.1f}%, after 5s: {usage2:.1f}%.\n"
+        f"First: {usage:.1f}%, after {delay}s: {usage2:.1f}%.\n"
         f"Top consumers:\n<pre>{consumers}</pre>",
         parse_mode="HTML",
     )
