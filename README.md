@@ -263,6 +263,7 @@ monitoring:
     cpu_percent: 80
     storage_percent: 90
     temperature_celsius: 50
+    recheck_delay_seconds: 5
 ```
 
 Thresholds can also be changed via the Telegram bot (System info → Thresholds) or the API.

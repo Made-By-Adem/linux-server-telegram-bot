@@ -249,7 +249,11 @@ curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
 curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
   $URL/monitoring/thresholds -d '{"key": "storage_percent", "value": 80}'
 
-# 4. Verify new thresholds
+# 4. Increase recheck delay (seconds to wait before second verification)
+curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  $URL/monitoring/thresholds -d '{"key": "recheck_delay_seconds", "value": 10}'
+
+# 5. Verify new thresholds
 curl -s -H "X-API-Key: $KEY" $URL/monitoring/thresholds
 ```
 

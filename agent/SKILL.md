@@ -104,7 +104,7 @@ All endpoints return JSON with a `success` boolean:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/monitoring/thresholds` | Get current thresholds (cpu_percent, storage_percent, temperature_celsius) |
+| GET | `/api/monitoring/thresholds` | Get current thresholds (cpu_percent, storage_percent, temperature_celsius, recheck_delay_seconds) |
 | PUT | `/api/monitoring/thresholds` | Update a threshold (body: `{"key": "cpu_percent", "value": 85}`) |
 
 ### Security

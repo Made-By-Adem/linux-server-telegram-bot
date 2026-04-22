@@ -299,14 +299,15 @@ curl -s -H "X-API-Key: $KEY" $URL/monitoring/thresholds
   "data": {
     "cpu_percent": 80,
     "storage_percent": 90,
-    "temperature_celsius": 50
+    "temperature_celsius": 50,
+    "recheck_delay_seconds": 5
   }
 }
 ```
 
 ### `PUT /api/monitoring/thresholds`
 
-Update a single threshold. Valid keys: `cpu_percent` (1-100), `storage_percent` (1-100), `temperature_celsius` (1-150).
+Update a single threshold. Valid keys: `cpu_percent` (1-100), `storage_percent` (1-100), `temperature_celsius` (1-150), `recheck_delay_seconds` (1-60).
 
 ```bash
 curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
@@ -319,7 +320,8 @@ curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
   "data": {
     "cpu_percent": 85,
     "storage_percent": 90,
-    "temperature_celsius": 50
+    "temperature_celsius": 50,
+    "recheck_delay_seconds": 5
   }
 }
 ```
@@ -327,7 +329,7 @@ curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
 Invalid key:
 
 ```json
-{"success": false, "error": "Invalid key: bogus. Valid keys: cpu_percent, storage_percent, temperature_celsius"}
+{"success": false, "error": "Invalid key: bogus. Valid keys: cpu_percent, storage_percent, temperature_celsius, recheck_delay_seconds"}
 ```
 
 Value out of range:
