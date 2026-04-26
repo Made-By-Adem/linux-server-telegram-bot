@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml
 from watchdog.events import FileSystemEventHandler
-from watchdog.observers import Observer
+from watchdog.observers.polling import PollingObserver
 
 logger = logging.getLogger(__name__)
 
@@ -391,7 +391,7 @@ class _ConfigReloadHandler(FileSystemEventHandler):
 
 # Module-level singleton
 config = AppConfig()
-_observer: Observer | None = None
+_observer: PollingObserver | None = None
 
 
 def load_config(path: str | Path | None = None) -> AppConfig:
@@ -417,7 +417,7 @@ def load_config(path: str | Path | None = None) -> AppConfig:
         _observer.join(timeout=2)
 
     handler = _ConfigReloadHandler(config_path, config)
-    _observer = Observer()
+    _observer = PollingObserver()
     _observer.schedule(handler, str(config_path.parent), recursive=False)
     _observer.daemon = True
     _observer.start()
@@ -461,8 +461,7 @@ def update_monitoring_policy(
 
     path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
     if not path.exists():
-        logger.warning("Config file %s not found, cannot update policy", path)
-        return
+        raise FileNotFoundError(f"Config file not found: {path}")
 
     # Update the raw YAML (without env interpolation, to preserve ${VAR} refs)
     raw_text = path.read_text(encoding="utf-8")
@@ -509,8 +508,7 @@ def update_feature(
 
     path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
     if not path.exists():
-        logger.warning("Config file %s not found, cannot update feature", path)
-        return
+        raise FileNotFoundError(f"Config file not found: {path}")
 
     raw_text = path.read_text(encoding="utf-8")
     raw = yaml.safe_load(raw_text) or {}
@@ -560,8 +558,7 @@ def update_monitoring_threshold(
 
     path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
     if not path.exists():
-        logger.warning("Config file %s not found, cannot update threshold", path)
-        return
+        raise FileNotFoundError(f"Config file not found: {path}")
 
     raw_text = path.read_text(encoding="utf-8")
     raw = yaml.safe_load(raw_text) or {}
@@ -610,8 +607,7 @@ def add_monitored_item(
 
     path = Path(config_path) if config_path else _DEFAULT_CONFIG_PATH
     if not path.exists():
-        logger.warning("Config file %s not found, cannot add item", path)
-        return
+        raise FileNotFoundError(f"Config file not found: {path}")
 
     raw_text = path.read_text(encoding="utf-8")
     raw = yaml.safe_load(raw_text) or {}
