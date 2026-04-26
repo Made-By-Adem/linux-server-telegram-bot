@@ -73,7 +73,34 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/updates/rollback
 
 ---
 
-## 4. Security Audit
+## 4. System Package Updates (Safe)
+
+```bash
+# 1. Check what's available -- does NOT install anything
+curl -s -X POST -H "X-API-Key: $KEY" $URL/system-updates/check
+# Response includes: count, packages list, rkhunter (bool)
+
+# 2. Review the count and package list before proceeding
+
+# 3. If the updates look good, apply them
+curl -s -X POST -H "X-API-Key: $KEY" $URL/system-updates/apply
+# Runs: apt-get upgrade -y
+# If rkhunter is installed: also runs rkhunter --propupd
+
+# 4. Verify system is still healthy after update
+curl -s -H "X-API-Key: $KEY" $URL/sysinfo
+curl -s -H "X-API-Key: $KEY" $URL/services/status
+```
+
+**Decision tree:**
+- 0 packages → nothing to do, skip
+- Security updates only → safe to apply
+- Major version bumps → review package list carefully before applying
+- After applying → check services and containers are still running
+
+---
+
+## 5. Security Audit
 
 ```bash
 # 1. Full security overview
@@ -103,7 +130,7 @@ curl -s -H "X-API-Key: $KEY" $URL/security/ssh
 
 ---
 
-## 5. Compose Stack Management
+## 6. Compose Stack Management
 
 ```bash
 # 1. Check all stack statuses
@@ -121,7 +148,7 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/compose/restart/monitoring
 
 ---
 
-## 6. Backup and Verify
+## 7. Backup and Verify
 
 ```bash
 # 1. Check current backup status
@@ -139,7 +166,7 @@ curl -s -X POST -H "X-API-Key: $KEY" "$URL/backups/trigger?target=ac3"
 
 ---
 
-## 7. Investigate High Resource Usage
+## 8. Investigate High Resource Usage
 
 ```bash
 # 1. Check CPU
@@ -169,7 +196,7 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/command \
 
 ---
 
-## 8. Log Investigation
+## 9. Log Investigation
 
 ```bash
 # 1. List available log files
@@ -185,7 +212,7 @@ curl -s -H "X-API-Key: $KEY" "$URL/logs/0?tail=200"
 
 ---
 
-## 9. Multi-Server Overview
+## 10. Multi-Server Overview
 
 When managing multiple servers, run the health check workflow against each server in parallel:
 
@@ -203,7 +230,7 @@ done
 
 ---
 
-## 10. AI Agent Autonomous Loop
+## 11. AI Agent Autonomous Loop
 
 Example of how an AI agent can autonomously monitor and remediate issues. Run periodically (e.g., every 5 minutes).
 
@@ -229,11 +256,14 @@ Example of how an AI agent can autonomously monitor and remediate issues. Run pe
    GET /api/security/fail2ban     → verify fail2ban is active
    GET /api/logs/0?tail=50        → check auth.log for patterns
 
-7. GET /api/backups/status        → if last backup > 24h ago:
+7. POST /api/system-updates/check → if count > 0:
+                                    → report available updates (do NOT auto-apply)
+
+8. GET /api/backups/status        → if last backup > 24h ago:
    POST /api/backups/trigger      → start backup
 ```
 
-## 11. Threshold Management
+## 12. Threshold Management
 
 View and adjust monitoring thresholds dynamically.
 

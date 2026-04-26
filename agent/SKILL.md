@@ -138,6 +138,13 @@ All endpoints return JSON with a `success` boolean:
 | POST | `/api/updates/run` | Apply container updates |
 | POST | `/api/updates/rollback` | Rollback last update |
 
+### System Updates (apt)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/system-updates/check` | Check available package updates (returns count + package list) |
+| POST | `/api/system-updates/apply` | Apply apt upgrade + rkhunter --propupd if installed |
+
 ### Backups (via script)
 
 | Method | Path | Description |
