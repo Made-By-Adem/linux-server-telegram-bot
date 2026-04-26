@@ -359,14 +359,14 @@ async def updates_rollback():
 # ---------------------------------------------------------------------------
 
 
-@router.post("/system-updates/dry-run")
-async def system_updates_dry_run():
-    return system_updates.dry_run_system_updates()
+@router.post("/system-updates/check")
+async def system_updates_check():
+    return system_updates.check_system_updates()
 
 
-@router.post("/system-updates/run")
-async def system_updates_run():
-    return system_updates.trigger_system_updates()
+@router.post("/system-updates/apply")
+async def system_updates_apply():
+    return system_updates.apply_system_updates()
 
 
 # ---------------------------------------------------------------------------
