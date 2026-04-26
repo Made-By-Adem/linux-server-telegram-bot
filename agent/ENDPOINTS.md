@@ -471,6 +471,28 @@ Error when script not configured:
 
 ---
 
+## System Updates
+
+Runs `apt-get update && apt-get upgrade -y` on the host. If rkhunter is installed, `rkhunter --propupd` is run automatically after a successful upgrade.
+
+### `POST /api/system-updates/dry-run`
+
+Run `apt-get update` and list upgradable packages without installing.
+
+```json
+{"success": true, "output": "Reading package lists...\nListing... Done\nnginx/stable 1.26.0-1 amd64 [upgradable from: 1.25.4-1]"}
+```
+
+### `POST /api/system-updates/run`
+
+Execute the full system update.
+
+```json
+{"success": true, "output": "Reading package lists...\n...\n--- rkhunter --propupd ---\n[ Rootkit Hunter version 1.4.6 ]\nFile updated: ..."}
+```
+
+---
+
 ## Backups
 
 Requires `scripts.backup` to be configured in config.yaml (path to [backup.sh](https://github.com/Made-By-Adem/linux-server-management-scripts)).

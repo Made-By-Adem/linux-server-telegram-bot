@@ -28,6 +28,7 @@ from linux_server_bot.shared.actions import (
     servers,
     services,
     sysinfo,
+    system_updates,
     updates,
     wol,
 )
@@ -351,6 +352,21 @@ async def updates_rollback():
     if not script:
         return {"success": False, "error": "Update script not configured"}
     return updates.rollback_updates(script)
+
+
+# ---------------------------------------------------------------------------
+# System Updates (apt update/upgrade)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/system-updates/dry-run")
+async def system_updates_dry_run():
+    return system_updates.dry_run_system_updates()
+
+
+@router.post("/system-updates/run")
+async def system_updates_run():
+    return system_updates.trigger_system_updates()
 
 
 # ---------------------------------------------------------------------------

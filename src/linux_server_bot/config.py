@@ -137,6 +137,7 @@ class FeaturesConfig:
     security_overview: bool = True
     backups: bool = True
     container_updates: bool = True
+    system_updates: bool = True
     logs: bool = True
     server_ping: bool = True
     system_info: bool = True

@@ -22,6 +22,7 @@ features:
   security_overview: true
   backups: true
   container_updates: true
+  system_updates: true
   logs: true
   server_ping: true
   system_info: true

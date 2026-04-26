@@ -31,6 +31,7 @@ BTN_STRESS = "\U0001f4aa Stress test"
 BTN_FAN = "\U0001f4a8 Fan state"
 BTN_SECURITY = "\U0001f512 Security"
 BTN_UPDATES = "\U0001f504 Updates"
+BTN_SYSTEM_UPDATES = "\U0001f4e6 System Update"
 BTN_BACKUPS = "\U0001f4be Backups"
 BTN_REBOOT = "\U0001f501 Reboot"
 BTN_SCRIPTS = "\U0001f4dc Scripts"
@@ -50,6 +51,7 @@ _FEATURE_BUTTONS: list[tuple[str, str]] = [
     ("fan_control", BTN_FAN),
     ("security_overview", BTN_SECURITY),
     ("container_updates", BTN_UPDATES),
+    ("system_updates", BTN_SYSTEM_UPDATES),
     ("backups", BTN_BACKUPS),
     ("reboot", BTN_REBOOT),
     ("custom_scripts", BTN_SCRIPTS),

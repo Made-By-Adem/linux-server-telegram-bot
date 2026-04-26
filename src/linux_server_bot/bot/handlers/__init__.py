@@ -13,6 +13,7 @@ from linux_server_bot.bot.handlers import (
     services,
     settings,
     sysinfo,
+    system_updates,
     updates,
     wol,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "services",
     "settings",
     "sysinfo",
+    "system_updates",
     "updates",
     "wol",
 ]
