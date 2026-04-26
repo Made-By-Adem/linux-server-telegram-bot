@@ -39,6 +39,7 @@ _HANDLER_MODULES = [
     handlers.sysinfo,
     handlers.security,
     handlers.updates,
+    handlers.system_updates,
     handlers.backups,
     handlers.reboot,
     handlers.scripts,
