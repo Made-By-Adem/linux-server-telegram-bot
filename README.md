@@ -54,7 +54,7 @@ Open the menu with `/menu` or a bot command and manage your server on-demand: st
 
 ### 📡 Background Monitoring
 
-The bot continuously watches your server and sends you a message when something needs attention. Only services and containers explicitly listed in `config.yaml` are monitored -- giving you full control over what gets checked.
+The bot continuously watches your server and sends you a message when something needs attention. Only services and containers explicitly listed in `config/config.yaml` are monitored -- giving you full control over what gets checked.
 
 **What it monitors:**
 
@@ -69,7 +69,7 @@ The bot continuously watches your server and sends you a message when something 
 | SSH failed logins | Alert on brute force attempts (>10 failures) |
 | Fail2ban bans | Alert when an IP gets banned |
 
-Services and containers are configured in `config.yaml` under `services` and `containers` (one list each, used by both the bot menu and monitoring). You can add/remove items and change failure policies via the Telegram bot menu, the API, or directly in `config.yaml`.
+Services and containers are configured in `config/config.yaml` under `services` and `containers` (one list each, used by both the bot menu and monitoring). You can add/remove items and change failure policies via the Telegram bot menu, the API, or directly in `config/config.yaml`.
 
 ### 🌐 HTTP API (Optional)
 
@@ -95,7 +95,7 @@ Telegram Chat
                                                ──> netcat              ──> Server Pings
 ```
 
-All processes share a single `config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
+All processes share a single `config/config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
 
 > [!NOTE]
 > **Docker host access**: The containers run in `privileged` mode with `pid: host`. Commands that need host binaries (systemctl, ufw, fail2ban-client, etc.) are automatically wrapped with `nsenter -t 1 -m --` to run in the host's mount namespace. This is transparent -- you don't need to do anything special.
@@ -466,7 +466,7 @@ docker exec linux-server-bot nsenter -t 1 -m -- systemctl is-active docker
 
 ```bash
 docker compose logs monitoring --tail 20
-# Only services/containers listed in config.yaml are monitored.
+# Only services/containers listed in config/config.yaml are monitored.
 # Check the failure policy is not set to 'ignore'.
 ```
 

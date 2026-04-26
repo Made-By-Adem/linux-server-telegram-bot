@@ -33,7 +33,7 @@ All endpoints return JSON with a `success` boolean:
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | Health check (no auth) |
-| POST | `/api/config/reload` | Hot-reload config.yaml |
+| POST | `/api/config/reload` | Hot-reload config/config.yaml |
 
 ### Docker Containers
 
@@ -173,8 +173,8 @@ In the Telegram bot these are combined under one "Updates + Containers" button. 
 
 ## Important Notes
 
-- **Container and service names** are explicitly configured in config.yaml -- only configured items are monitored. Use the CRUD endpoints to add/remove items at runtime.
+- **Container and service names** are explicitly configured in config/config.yaml -- only configured items are monitored. Use the CRUD endpoints to add/remove items at runtime.
 - **Updates and backups** require external scripts to be installed (from [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts))
 - **Reboot** requires explicit `{"confirm": true}` -- will not execute without it
 - **Command execution** runs with server-level privileges -- use with caution
-- **Config reload** picks up changes to config.yaml without restarting services
+- **Config reload** picks up changes to config/config.yaml without restarting services

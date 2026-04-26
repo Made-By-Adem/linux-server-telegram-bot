@@ -253,7 +253,7 @@ curl -s -H "X-API-Key: $KEY" $URL/sysinfo
 
 ### `POST /api/sysinfo/stress-test?minutes=1`
 
-Run a CPU stress test. Requires `features.stress_test: true` in config.yaml. Duration: 1--60 minutes.
+Run a CPU stress test. Requires `features.stress_test: true` in config/config.yaml. Duration: 1--60 minutes.
 
 ```bash
 curl -s -X POST -H "X-API-Key: $KEY" "$URL/sysinfo/stress-test?minutes=2"
@@ -271,7 +271,7 @@ Feature disabled:
 
 ### `POST /api/sysinfo/fan?state=0`
 
-Set fan state. Requires `features.fan_control: true` in config.yaml (typically Raspberry Pi only). `0` = off/auto, `1` = on.
+Set fan state. Requires `features.fan_control: true` in config/config.yaml (typically Raspberry Pi only). `0` = off/auto, `1` = on.
 
 ```bash
 curl -s -X POST -H "X-API-Key: $KEY" "$URL/sysinfo/fan?state=1"
@@ -461,7 +461,7 @@ Execute `apt-get upgrade -y`. If rkhunter is installed, runs `rkhunter --propupd
 
 ### Container Updates (via script)
 
-Requires `scripts.update_containers` to be configured in config.yaml (path to [update-containers.sh](https://github.com/Made-By-Adem/linux-server-management-scripts)).
+Requires `scripts.update_containers` to be configured in config/config.yaml (path to [update-containers.sh](https://github.com/Made-By-Adem/linux-server-management-scripts)).
 
 #### `POST /api/updates/dry-run`
 
@@ -497,7 +497,7 @@ Error when script not configured:
 
 ## Backups
 
-Requires `scripts.backup` to be configured in config.yaml (path to [backup.sh](https://github.com/Made-By-Adem/linux-server-management-scripts)).
+Requires `scripts.backup` to be configured in config/config.yaml (path to [backup.sh](https://github.com/Made-By-Adem/linux-server-management-scripts)).
 
 ### `POST /api/backups/trigger`
 
@@ -684,7 +684,7 @@ curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
 
 ### `POST /api/config/reload`
 
-Hot-reload config.yaml without restarting services.
+Hot-reload config/config.yaml without restarting services.
 
 ```bash
 curl -s -X POST -H "X-API-Key: $KEY" $URL/config/reload
