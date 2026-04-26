@@ -165,7 +165,15 @@ docker compose logs -f
 
 All settings are in `config/config.yaml` with `${VAR}` syntax for environment variable references. Changes are picked up automatically (hot-reload). See [`config.example.yaml`](config.example.yaml) for a complete reference.
 
-> **Upgrading from 2.x?** The live config moved from `./config.yaml` to `./config/config.yaml` to fix a Docker single-file bind-mount bug that silently dropped threshold updates. Run `./tools/migrate-config-layout.sh` once before `docker compose up -d`. Host-native runs migrate automatically on next startup.
+> [!WARNING]
+> **Upgrading from 2.x?** The live config moved from `./config.yaml` to `./config/config.yaml` to fix a Docker single-file bind-mount bug that silently dropped threshold updates. **Skipping the migration step puts the bot in a restart loop** because the container's new directory mount lands on an empty `./config/` and no `SECRET_TOKEN` is found.
+>
+> Canonical upgrade one-liner (idempotent, safe to re-run):
+> ```bash
+> git fetch origin && git checkout main && git pull && ./tools/migrate-config-layout.sh && docker compose down && docker compose build --no-cache && docker compose up -d
+> ```
+>
+> Host-native runs (no Docker) migrate automatically on next startup -- no script needed.
 
 #### Services and containers
 
