@@ -83,6 +83,7 @@ def run_command(
     cmd: list[str],
     timeout: int = _DEFAULT_TIMEOUT,
     check: bool = False,
+    force_host: bool = False,
 ) -> ShellResult:
     """Run a command as a list of arguments (no shell interpolation).
 
@@ -90,7 +91,9 @@ def run_command(
     are known at construction time (systemctl, docker, nc, etherwake, etc.).
 
     When running in Docker with pid:host, commands that require host binaries
-    are automatically wrapped with ``nsenter -t 1 -m --``.
+    are automatically wrapped with ``nsenter -t 1 -m --``. Use ``force_host=True``
+    for commands that read host filesystem paths even though the binary itself
+    runs fine inside the container (e.g. ``docker compose -f /host/path/...``).
     """
     # Determine the actual binary (skip sudo to check the real command)
     first_cmd = cmd[0]
@@ -100,7 +103,8 @@ def run_command(
         actual_cmd = first_cmd
 
     # Wrap with nsenter if needed
-    if _needs_nsenter(actual_cmd) and _nsenter_available():
+    needs_host = force_host or _needs_nsenter(actual_cmd)
+    if _in_docker() and needs_host and _nsenter_available():
         cmd = ["nsenter", "-t", "1", "-m", "--"] + cmd
         logger.debug("run_command (nsenter): %s", " ".join(cmd))
     else:
