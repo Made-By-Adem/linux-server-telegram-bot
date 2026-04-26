@@ -23,3 +23,6 @@ venv/
 .vscode/
 .idea/
 config.prod.yaml
+
+#Claude
+.claude
