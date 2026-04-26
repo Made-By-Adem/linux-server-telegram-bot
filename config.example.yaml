@@ -28,6 +28,7 @@ features:
   system_info: true
   stress_test: true
   fan_control: true
+  pironman: false
   reboot: true
   custom_scripts: true
   settings: true
@@ -146,6 +147,15 @@ scripts:
     - name: Lynis
       path: /usr/local/bin/lynis-telegram.sh
       timeout: 600
+
+# Pironman case settings (SunFounder Pironman 5 / 5 Max).
+# Only relevant on a Raspberry Pi with a Pironman case.
+# Enable the "pironman" feature flag above to show the menu.
+# The bot auto-disables the feature if the pironman5 CLI is not installed.
+pironman:
+  # "base" or "max" -- determines which options appear in the menu.
+  # "max" adds fan LED control and OLED sleep timeout.
+  variant: base
 
 # Path to shared server states file (used by both bot and monitoring)
 server_states_path: server_states.json

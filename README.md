@@ -13,7 +13,7 @@ AI Agent ─────── REST API ───┘
 
 <img src="example.jpg" alt="Telegram bot interface" width="250">
 
-Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5, but should work on any Linux server.
+Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5 (with Pironman 5 Max case), but should work on any Linux server.
 
 > [!TIP]
 > **Setting up a new server?** Use [linux-server-management-scripts](https://github.com/Made-By-Adem/linux-server-management-scripts) first to harden your server (SSH, firewall, Fail2ban, Docker, and 17 security layers), then deploy this bot for ongoing management.
@@ -31,6 +31,7 @@ Tested on Ubuntu 24.04, Debian 12, and Raspberry Pi 5, but should work on any Li
 - **Ping servers** -- check if your other servers and websites are reachable
 - **Execute commands** -- run any shell command when you need it
 - **Run custom scripts** -- execute configured scripts with configurable timeouts
+- **Pironman case control** -- fan modes, RGB LED color/style/speed/brightness, fan LED, and OLED sleep for SunFounder Pironman 5 / 5 Max (optional, auto-disabled when not installed)
 - **Manage settings** -- toggle features, adjust monitoring thresholds, and change failure policies from Telegram
 - **REST API** -- every feature above is also available as an HTTP endpoint with Swagger docs, designed for dashboards, automation, and AI agent integration
 
@@ -49,7 +50,7 @@ The bot has two sides, both in the same Telegram chat:
 
 Open the menu with `/menu` or a bot command and manage your server on-demand: start/stop containers, check security, view logs, trigger updates, etc. The main menu stays visible at the bottom of the chat, with inline buttons for actions.
 
-**What you can control:** Docker containers, systemd services, security overview, system info, log viewer, server ping, container updates, backups, custom commands, stress test, fan control, reboot, config reload.
+**What you can control:** Docker containers, systemd services, security overview, system info, log viewer, server ping, system + container updates, backups, custom commands, stress test, fan control, Pironman case (fan modes + RGB LED), reboot, config reload.
 
 ### 📡 Background Monitoring
 
@@ -224,14 +225,30 @@ features:
   custom_scripts: true
   logs: true
   system_info: true
-  container_updates: true
+  container_updates: true  # covers both system (apt) and container updates
   backups: true
   wol: true              # also hidden when WOL_ADDRESS is empty
   stress_test: true
   fan_control: true
+  pironman: false       # Pironman 5 / 5 Max case (auto-disabled if pironman5 CLI not found)
   reboot: true
   settings: true
 ```
+
+#### Pironman (optional)
+
+For Raspberry Pi with a [SunFounder Pironman 5](https://github.com/sunfounder/pironman5) or Pironman 5 Max case. Requires the `pironman5` CLI to be installed on the host. If the CLI is not found, the feature is automatically disabled regardless of the config.
+
+```yaml
+features:
+  pironman: true        # enable the Pironman menu button
+
+pironman:
+  variant: max          # "base" or "max"
+```
+
+- `variant: base` -- fan modes (5 modes) + RGB LED control (color, style, speed, brightness, on/off) + show config
+- `variant: max` -- everything above + fan LED control (on/off/follow) + OLED sleep timeout
 
 #### Scripts
 
@@ -297,11 +314,12 @@ API_KEY=my-custom-secret-key
 | Security | Full overview on request | Brute force & ban alerts | Full overview |
 | Server ping | On-demand check | State-change alerts | On-demand |
 | Wake-on-LAN | Wake configured device | -- | Via HTTP |
-| Container updates | Dry-run, update, rollback | -- | Via HTTP |
+| Updates + Containers | System check, container dry-run, apply system, apply containers, rollback | -- | Via HTTP |
 | Backups | Trigger, status, disk usage | -- | Via HTTP |
 | Log viewer | Browse & download as .txt | -- | List & read tail |
 | Custom commands | Execute any shell command | -- | Via HTTP |
 | Custom scripts | Run configured scripts | -- | -- |
+| Pironman | Fan modes, RGB LED, fan LED, OLED sleep | -- | -- |
 | Settings | Toggle features, thresholds, policies | -- | -- |
 
 ---
@@ -384,7 +402,7 @@ curl -H "X-API-Key: $KEY" https://api-myserver.example.com/api/docker/status
 | `/ping` | Ping configured servers |
 | `/command` | Execute a shell command |
 | `/scripts` | Run custom scripts |
-| `/updates` | Container updates (dry-run, update, rollback) |
+| `/updates` | Updates + Containers (system check, container dry-run, apply, rollback) |
 | `/backups` | Backup management |
 | `/wakewol` | Wake-on-LAN |
 | `/settings` | Manage features, thresholds, and policies |
@@ -402,7 +420,7 @@ src/linux_server_bot/
         app.py             # Bot entrypoint
         menus.py           # Keyboard builder (hides unconfigured features)
         callbacks.py       # Central InlineKeyboard callback router
-        handlers/          # One module per feature
+        handlers/          # One module per feature (incl. pironman for Pi case control)
     monitoring/
         app.py             # Monitoring scheduler
         checks/            # One module per check type

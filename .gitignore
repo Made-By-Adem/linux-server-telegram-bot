@@ -24,6 +24,9 @@ venv/
 .idea/
 config.prod.yaml
 
+# Crash dumps
+*.stackdump
+
 #Claude
 .claude
 pi-telegrambot-old

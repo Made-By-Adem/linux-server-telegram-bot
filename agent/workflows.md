@@ -55,7 +55,30 @@ curl -s -H "X-API-Key: $KEY" $URL/docker/status
 
 ---
 
-## 3. Update Containers (Safe)
+## 3. Updates -- System Packages + Containers (Safe)
+
+In the Telegram bot, both are under one "Updates + Containers" button. Via API, use the separate endpoints below.
+
+### System packages (apt)
+
+```bash
+# 1. Check what's available -- does NOT install anything
+curl -s -X POST -H "X-API-Key: $KEY" $URL/system-updates/check
+# Response includes: count, packages list, rkhunter (bool)
+
+# 2. Review the count and package list before proceeding
+
+# 3. If the updates look good, apply them
+curl -s -X POST -H "X-API-Key: $KEY" $URL/system-updates/apply
+# Runs: apt-get upgrade -y
+# If rkhunter is installed: also runs rkhunter --propupd
+
+# 4. Verify system is still healthy
+curl -s -H "X-API-Key: $KEY" $URL/sysinfo
+curl -s -H "X-API-Key: $KEY" $URL/services/status
+```
+
+### Containers (via script)
 
 ```bash
 # 1. Dry-run first -- preview what would change
@@ -71,36 +94,14 @@ curl -s -H "X-API-Key: $KEY" $URL/docker/status
 curl -s -X POST -H "X-API-Key: $KEY" $URL/updates/rollback
 ```
 
----
-
-## 4. System Package Updates (Safe)
-
-```bash
-# 1. Check what's available -- does NOT install anything
-curl -s -X POST -H "X-API-Key: $KEY" $URL/system-updates/check
-# Response includes: count, packages list, rkhunter (bool)
-
-# 2. Review the count and package list before proceeding
-
-# 3. If the updates look good, apply them
-curl -s -X POST -H "X-API-Key: $KEY" $URL/system-updates/apply
-# Runs: apt-get upgrade -y
-# If rkhunter is installed: also runs rkhunter --propupd
-
-# 4. Verify system is still healthy after update
-curl -s -H "X-API-Key: $KEY" $URL/sysinfo
-curl -s -H "X-API-Key: $KEY" $URL/services/status
-```
-
 **Decision tree:**
-- 0 packages → nothing to do, skip
-- Security updates only → safe to apply
-- Major version bumps → review package list carefully before applying
-- After applying → check services and containers are still running
+- System: 0 packages → skip; security updates only → safe to apply; major version bumps → review carefully
+- Containers: dry-run shows no changes → skip; dry-run shows updates → apply and verify
+- After applying either → check services and containers are still running
 
 ---
 
-## 5. Security Audit
+## 4. Security Audit
 
 ```bash
 # 1. Full security overview
@@ -130,7 +131,7 @@ curl -s -H "X-API-Key: $KEY" $URL/security/ssh
 
 ---
 
-## 6. Compose Stack Management
+## 5. Compose Stack Management
 
 ```bash
 # 1. Check all stack statuses
@@ -148,7 +149,7 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/compose/restart/monitoring
 
 ---
 
-## 7. Backup and Verify
+## 6. Backup and Verify
 
 ```bash
 # 1. Check current backup status
@@ -166,7 +167,7 @@ curl -s -X POST -H "X-API-Key: $KEY" "$URL/backups/trigger?target=ac3"
 
 ---
 
-## 8. Investigate High Resource Usage
+## 7. Investigate High Resource Usage
 
 ```bash
 # 1. Check CPU
@@ -196,7 +197,7 @@ curl -s -X POST -H "X-API-Key: $KEY" $URL/command \
 
 ---
 
-## 9. Log Investigation
+## 8. Log Investigation
 
 ```bash
 # 1. List available log files
@@ -212,7 +213,7 @@ curl -s -H "X-API-Key: $KEY" "$URL/logs/0?tail=200"
 
 ---
 
-## 10. Multi-Server Overview
+## 9. Multi-Server Overview
 
 When managing multiple servers, run the health check workflow against each server in parallel:
 
@@ -230,7 +231,7 @@ done
 
 ---
 
-## 11. AI Agent Autonomous Loop
+## 10. AI Agent Autonomous Loop
 
 Example of how an AI agent can autonomously monitor and remediate issues. Run periodically (e.g., every 5 minutes).
 
@@ -263,7 +264,7 @@ Example of how an AI agent can autonomously monitor and remediate issues. Run pe
    POST /api/backups/trigger      → start backup
 ```
 
-## 12. Threshold Management
+## 11. Threshold Management
 
 View and adjust monitoring thresholds dynamically.
 

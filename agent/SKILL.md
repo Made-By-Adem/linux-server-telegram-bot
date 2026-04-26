@@ -130,20 +130,17 @@ All endpoints return JSON with a `success` boolean:
 |--------|------|-------------|
 | POST | `/api/wol` | Wake configured device |
 
-### Container Updates (via script)
+### Updates (system + containers)
+
+In the Telegram bot these are combined under one "Updates + Containers" button. The API keeps them as separate endpoints.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/updates/dry-run` | Preview available updates |
-| POST | `/api/updates/run` | Apply container updates |
-| POST | `/api/updates/rollback` | Rollback last update |
-
-### System Updates (apt)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/system-updates/check` | Check available package updates (returns count + package list) |
+| POST | `/api/system-updates/check` | Check available system package updates (returns count + package list) |
 | POST | `/api/system-updates/apply` | Apply apt upgrade + rkhunter --propupd if installed |
+| POST | `/api/updates/dry-run` | Preview available container updates |
+| POST | `/api/updates/run` | Apply container updates |
+| POST | `/api/updates/rollback` | Rollback last container update |
 
 ### Backups (via script)
 
