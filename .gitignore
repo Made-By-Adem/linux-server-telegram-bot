@@ -26,3 +26,4 @@ config.prod.yaml
 
 #Claude
 .claude
+pi-telegrambot-old
