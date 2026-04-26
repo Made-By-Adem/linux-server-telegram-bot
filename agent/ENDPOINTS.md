@@ -435,11 +435,35 @@ Error when not configured:
 
 ---
 
-## Container Updates
+## Updates (System + Containers)
+
+In the Telegram bot these are combined under one "Updates + Containers" button. The API keeps them as separate endpoints.
+
+### System Updates (apt)
+
+Runs `apt-get update && apt-get upgrade -y` on the host. If rkhunter is installed, `rkhunter --propupd` is run automatically after a successful upgrade.
+
+#### `POST /api/system-updates/check`
+
+Run `apt-get update` and list upgradable packages without installing. Returns the package list, count, and whether rkhunter is installed.
+
+```json
+{"success": true, "count": 3, "packages": ["nginx/stable 1.26.0-1 amd64 [upgradable from: 1.25.4-1]", "..."], "rkhunter": true, "output": "..."}
+```
+
+#### `POST /api/system-updates/apply`
+
+Execute `apt-get upgrade -y`. If rkhunter is installed, runs `rkhunter --propupd` afterwards.
+
+```json
+{"success": true, "output": "Reading package lists...\n...\n--- rkhunter --propupd ---\n[ Rootkit Hunter version 1.4.6 ]\nFile updated: ..."}
+```
+
+### Container Updates (via script)
 
 Requires `scripts.update_containers` to be configured in config.yaml (path to [update-containers.sh](https://github.com/Made-By-Adem/linux-server-management-scripts)).
 
-### `POST /api/updates/dry-run`
+#### `POST /api/updates/dry-run`
 
 Preview what would be updated.
 
@@ -447,7 +471,7 @@ Preview what would be updated.
 {"success": true, "output": "Checking nginx... update available\nChecking portainer... up to date"}
 ```
 
-### `POST /api/updates/run`
+#### `POST /api/updates/run`
 
 Execute the update.
 
@@ -455,7 +479,7 @@ Execute the update.
 {"success": true, "output": "Updating nginx... done\n..."}
 ```
 
-### `POST /api/updates/rollback`
+#### `POST /api/updates/rollback`
 
 Rollback the last update.
 
@@ -467,28 +491,6 @@ Error when script not configured:
 
 ```json
 {"success": false, "error": "Update script not configured"}
-```
-
----
-
-## System Updates
-
-Runs `apt-get update && apt-get upgrade -y` on the host. If rkhunter is installed, `rkhunter --propupd` is run automatically after a successful upgrade.
-
-### `POST /api/system-updates/check`
-
-Run `apt-get update` and list upgradable packages without installing. Returns the package list, count, and whether rkhunter is installed.
-
-```json
-{"success": true, "count": 3, "packages": ["nginx/stable 1.26.0-1 amd64 [upgradable from: 1.25.4-1]", "..."], "rkhunter": true, "output": "..."}
-```
-
-### `POST /api/system-updates/apply`
-
-Execute `apt-get upgrade -y`. If rkhunter is installed, runs `rkhunter --propupd` afterwards.
-
-```json
-{"success": true, "output": "Reading package lists...\n...\n--- rkhunter --propupd ---\n[ Rootkit Hunter version 1.4.6 ]\nFile updated: ..."}
 ```
 
 ---

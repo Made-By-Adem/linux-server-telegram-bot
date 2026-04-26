@@ -29,9 +29,9 @@ BTN_SERVERS = "\U0001f514 Check servers"
 BTN_SYSINFO = "\U0001f4c3 System info"
 BTN_STRESS = "\U0001f4aa Stress test"
 BTN_FAN = "\U0001f4a8 Fan state"
+BTN_PIRONMAN = "\U0001f6a6 Pironman"
 BTN_SECURITY = "\U0001f512 Security"
-BTN_UPDATES = "\U0001f504 Updates"
-BTN_SYSTEM_UPDATES = "\U0001f4e6 System Update"
+BTN_UPDATES = "\U0001f504 Updates + Containers"
 BTN_BACKUPS = "\U0001f4be Backups"
 BTN_REBOOT = "\U0001f501 Reboot"
 BTN_SCRIPTS = "\U0001f4dc Scripts"
@@ -49,9 +49,9 @@ _FEATURE_BUTTONS: list[tuple[str, str]] = [
     ("system_info", BTN_SYSINFO),
     ("stress_test", BTN_STRESS),
     ("fan_control", BTN_FAN),
+    ("pironman", BTN_PIRONMAN),
     ("security_overview", BTN_SECURITY),
     ("container_updates", BTN_UPDATES),
-    ("system_updates", BTN_SYSTEM_UPDATES),
     ("backups", BTN_BACKUPS),
     ("reboot", BTN_REBOOT),
     ("custom_scripts", BTN_SCRIPTS),

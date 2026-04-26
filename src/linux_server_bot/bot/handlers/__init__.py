@@ -6,6 +6,7 @@ from linux_server_bot.bot.handlers import (
     compose,
     docker,
     logs,
+    pironman,
     reboot,
     scripts,
     security,
@@ -13,7 +14,6 @@ from linux_server_bot.bot.handlers import (
     services,
     settings,
     sysinfo,
-    system_updates,
     updates,
     wol,
 )
@@ -24,6 +24,7 @@ __all__ = [
     "compose",
     "docker",
     "logs",
+    "pironman",
     "reboot",
     "scripts",
     "security",
@@ -31,7 +32,6 @@ __all__ = [
     "services",
     "settings",
     "sysinfo",
-    "system_updates",
     "updates",
     "wol",
 ]

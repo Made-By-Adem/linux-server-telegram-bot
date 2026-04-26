@@ -137,15 +137,22 @@ class FeaturesConfig:
     security_overview: bool = True
     backups: bool = True
     container_updates: bool = True
-    system_updates: bool = True
     logs: bool = True
     server_ping: bool = True
     system_info: bool = True
     stress_test: bool = True
     fan_control: bool = True
+    pironman: bool = False
     reboot: bool = True
     custom_scripts: bool = True
     settings: bool = True
+
+
+@dataclass
+class PironmanConfig:
+    variant: str = "base"
+
+    VARIANTS = ("base", "max")
 
 
 @dataclass
@@ -198,6 +205,7 @@ class AppConfig:
     servers: list[ServerEntry] = field(default_factory=list)
     logfiles: list[str] = field(default_factory=list)
     scripts: ScriptsConfig = field(default_factory=ScriptsConfig)
+    pironman: PironmanConfig = field(default_factory=PironmanConfig)
     monitoring: MonitoringConfig = field(default_factory=MonitoringConfig)
     api: ApiConfig = field(default_factory=ApiConfig)
     server_states_path: str = "server_states.json"
@@ -268,16 +276,16 @@ class AppConfig:
             else FeaturesConfig()
         )
 
-        self.services = _parse_monitored_items(data.get("services", []))
-        self.containers = _parse_monitored_items(data.get("containers", []))
-        self.logfiles = data.get("logfiles", [])
+        self.services = _parse_monitored_items(data.get("services") or [])
+        self.containers = _parse_monitored_items(data.get("containers") or [])
+        self.logfiles = data.get("logfiles") or []
         self.server_states_path = data.get("server_states_path", "server_states.json")
         self.log_directory = data.get("log_directory", "./logs")
 
         # Compose stacks
         self.compose_stacks = [
             ComposeStack(name=s["name"], path=s["path"])
-            for s in data.get("compose_stacks", [])
+            for s in (data.get("compose_stacks") or [])
             if "name" in s and "path" in s
         ]
 
@@ -288,15 +296,15 @@ class AppConfig:
                 host=s["host"],
                 port=int(s.get("port", 443)),
             )
-            for s in data.get("servers", [])
+            for s in (data.get("servers") or [])
             if "name" in s and "host" in s
         ]
 
         # Scripts
-        scripts = data.get("scripts", {})
+        scripts = data.get("scripts") or {}
         custom_scripts = [
             CustomScript(name=s["name"], path=s["path"], timeout=int(s.get("timeout", 300)))
-            for s in scripts.get("custom", [])
+            for s in (scripts.get("custom") or [])
             if isinstance(s, dict) and "name" in s and "path" in s
         ]
         # Backup config accepts either a plain path string (legacy) or a dict
@@ -315,8 +323,15 @@ class AppConfig:
             custom=custom_scripts,
         )
 
+        # Pironman
+        pironman_data = data.get("pironman") or {}
+        variant = str(pironman_data.get("variant", "base")).lower()
+        if variant not in PironmanConfig.VARIANTS:
+            variant = "base"
+        self.pironman = PironmanConfig(variant=variant)
+
         # API
-        api_data = data.get("api", {})
+        api_data = data.get("api") or {}
         self.api = ApiConfig(
             enabled=bool(api_data.get("enabled", False)),
             port=int(api_data.get("port", 8120)),
@@ -324,10 +339,10 @@ class AppConfig:
         )
 
         # Monitoring
-        mon = data.get("monitoring", {})
+        mon = data.get("monitoring") or {}
         mon_servers = [
             ServerEntry(name=s["name"], host=s["host"], port=int(s.get("port", 443)))
-            for s in mon.get("servers", [])
+            for s in (mon.get("servers") or [])
             if "name" in s and "host" in s
         ]
         self.monitoring = MonitoringConfig(
@@ -335,6 +350,20 @@ class AppConfig:
             servers=mon_servers,
             thresholds=mon.get("thresholds", MonitoringConfig().thresholds),
             security=mon.get("security", MonitoringConfig().security),
+        )
+
+
+def _check_pironman_availability() -> None:
+    """Auto-disable pironman feature if the pironman5 CLI is not installed."""
+    if not config.features.pironman:
+        return
+    from linux_server_bot.shared.actions.pironman import is_available
+
+    if not is_available():
+        config.features.pironman = False
+        logger.warning(
+            "pironman5 CLI not found -- disabling pironman feature. "
+            "Install pironman5 to enable it: https://github.com/sunfounder/pironman5"
         )
 
 
@@ -385,6 +414,7 @@ class _ConfigReloadHandler(FileSystemEventHandler):
         try:
             data = _load_yaml(self._config_path)
             self._app_config.update_from_dict(data)
+            _check_pironman_availability()
             logger.info("Config reloaded from %s", self._config_path)
         except Exception:
             logger.exception("Failed to reload config from %s", self._config_path)
@@ -411,6 +441,8 @@ def load_config(path: str | Path | None = None) -> AppConfig:
     data = _load_yaml(config_path)
     config.update_from_dict(data)
     logger.info("Config loaded from %s", config_path)
+
+    _check_pironman_availability()
 
     # Start file watcher
     if _observer is not None:

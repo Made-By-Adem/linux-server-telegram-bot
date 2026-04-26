@@ -35,6 +35,7 @@ _FEATURE_LABELS = {
     "system_info": "System info",
     "stress_test": "Stress test",
     "fan_control": "Fan control",
+    "pironman": "Pironman",
     "reboot": "Reboot",
     "custom_scripts": "Scripts",
     "settings": "Settings",
