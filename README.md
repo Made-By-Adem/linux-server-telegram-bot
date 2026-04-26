@@ -8,7 +8,7 @@ The API makes this bot a natural fit for **AI agents**: give your agent the [ski
 Telegram Chat ──── Bot ──────┐
                              ├──> shared/actions/ ──> Docker / systemd / shell
 AI Agent ─────── REST API ───┘
-                               ▲ single config.yaml (hot-reloadable)
+                               ▲ single config/config.yaml (hot-reloadable)
 ```
 
 <img src="example.jpg" alt="Telegram bot interface" width="250">
@@ -54,7 +54,7 @@ Open the menu with `/menu` or a bot command and manage your server on-demand: st
 
 ### 📡 Background Monitoring
 
-The bot continuously watches your server and sends you a message when something needs attention. Only services and containers explicitly listed in `config.yaml` are monitored -- giving you full control over what gets checked.
+The bot continuously watches your server and sends you a message when something needs attention. Only services and containers explicitly listed in `config/config.yaml` are monitored -- giving you full control over what gets checked.
 
 **What it monitors:**
 
@@ -69,7 +69,7 @@ The bot continuously watches your server and sends you a message when something 
 | SSH failed logins | Alert on brute force attempts (>10 failures) |
 | Fail2ban bans | Alert when an IP gets banned |
 
-Services and containers are configured in `config.yaml` under `services` and `containers` (one list each, used by both the bot menu and monitoring). You can add/remove items and change failure policies via the Telegram bot menu, the API, or directly in `config.yaml`.
+Services and containers are configured in `config/config.yaml` under `services` and `containers` (one list each, used by both the bot menu and monitoring). You can add/remove items and change failure policies via the Telegram bot menu, the API, or directly in `config/config.yaml`.
 
 ### 🌐 HTTP API (Optional)
 
@@ -95,7 +95,7 @@ Telegram Chat
                                                ──> netcat              ──> Server Pings
 ```
 
-All processes share a single `config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
+All processes share a single `config/config.yaml` with hot-reload support (edit while running, changes are picked up automatically).
 
 > [!NOTE]
 > **Docker host access**: The containers run in `privileged` mode with `pid: host`. Commands that need host binaries (systemctl, ufw, fail2ban-client, etc.) are automatically wrapped with `nsenter -t 1 -m --` to run in the host's mount namespace. This is transparent -- you don't need to do anything special.
@@ -117,7 +117,7 @@ cd linux-server-telegram-bot
 
 # Copy example configs
 cp .env.example .env
-cp config.example.yaml config.yaml
+mkdir -p config && cp config.example.yaml config/config.yaml
 ```
 
 Edit `.env` with the credentials from step 1:
@@ -161,9 +161,11 @@ docker compose logs -f
 | `WOL_ADDRESS` | No | MAC address for Wake-on-LAN (menu button hidden when empty) |
 | `WOL_HOSTNAME` | No | Display name for the WoL device |
 
-### config.yaml
+### config/config.yaml
 
-All settings are in `config.yaml` with `${VAR}` syntax for environment variable references. Changes are picked up automatically (hot-reload). See [`config.example.yaml`](config.example.yaml) for a complete reference.
+All settings are in `config/config.yaml` with `${VAR}` syntax for environment variable references. Changes are picked up automatically (hot-reload). See [`config.example.yaml`](config.example.yaml) for a complete reference.
+
+> **Upgrading from 2.x?** The live config moved from `./config.yaml` to `./config/config.yaml` to fix a Docker single-file bind-mount bug that silently dropped threshold updates. Run `./tools/migrate-config-layout.sh` once before `docker compose up -d`. Host-native runs migrate automatically on next startup.
 
 #### Services and containers
 
@@ -464,7 +466,7 @@ docker exec linux-server-bot nsenter -t 1 -m -- systemctl is-active docker
 
 ```bash
 docker compose logs monitoring --tail 20
-# Only services/containers listed in config.yaml are monitored.
+# Only services/containers listed in config/config.yaml are monitored.
 # Check the failure policy is not set to 'ignore'.
 ```
 

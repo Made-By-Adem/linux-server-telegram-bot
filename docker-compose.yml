@@ -5,10 +5,10 @@ services:
     command: linux-bot
     env_file: .env
     environment:
-      CONFIG_PATH: /app/config.yaml
+      CONFIG_PATH: /app/config/config.yaml
     volumes:
       - ./.env:/app/.env
-      - ./config.yaml:/app/config.yaml
+      - ./config:/app/config
       - ./logs/bot:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -32,10 +32,10 @@ services:
     command: linux-monitor
     env_file: .env
     environment:
-      CONFIG_PATH: /app/config.yaml
+      CONFIG_PATH: /app/config/config.yaml
     volumes:
       - ./.env:/app/.env
-      - ./config.yaml:/app/config.yaml
+      - ./config:/app/config
       - ./logs/monitoring:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
@@ -55,12 +55,12 @@ services:
     command: linux-api
     env_file: .env
     environment:
-      CONFIG_PATH: /app/config.yaml
+      CONFIG_PATH: /app/config/config.yaml
     ports:
       - "8120:8120"
     volumes:
       - ./.env:/app/.env
-      - ./config.yaml:/app/config.yaml
+      - ./config:/app/config
       - ./logs/api:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket

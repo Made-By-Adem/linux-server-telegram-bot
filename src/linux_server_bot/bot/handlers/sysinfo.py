@@ -182,7 +182,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             return
 
         try:
-            update_monitoring_threshold(key, value, os.environ.get("CONFIG_PATH", "config.yaml"))
+            update_monitoring_threshold(key, value, os.environ.get("CONFIG_PATH", "config/config.yaml"))
             label, unit = _THRESHOLD_LABELS[key]
             bot.send_message(
                 message.chat.id,

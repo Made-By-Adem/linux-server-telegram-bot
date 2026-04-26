@@ -19,7 +19,7 @@ This directory contains everything an AI agent needs to manage Linux servers via
 
 ### 1. Deploy the API on your server(s)
 
-Follow the main [README](../README.md) to deploy the bot + API via Docker Compose. Ensure the API section is enabled in `config.yaml`:
+Follow the main [README](../README.md) to deploy the bot + API via Docker Compose. Ensure the API section is enabled in `config/config.yaml`:
 
 ```yaml
 api:

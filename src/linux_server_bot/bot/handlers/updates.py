@@ -51,7 +51,7 @@ def _format_check_result(result: dict) -> str:
     for pkg in packages:
         lines.append(f"  • {escape_html(pkg)}")
 
-    lines.append(f"\n\U0001f4cb <b>This will run:</b>")
+    lines.append("\n\U0001f4cb <b>This will run:</b>")
     lines.append("  <code>sudo apt-get upgrade -y</code>")
     if rkhunter:
         lines.append("  <code>sudo rkhunter --propupd</code>")
@@ -150,7 +150,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             script = _check_script()
             if not script:
                 safe_answer_callback_query(bot_inst, call.id, "Script not configured")
-                bot_inst.send_message(chat_id, "Update script not configured in config.yaml (scripts.update_containers).")
+                bot_inst.send_message(
+                    chat_id,
+                    "Update script not configured in config.yaml (scripts.update_containers).",
+                )
                 return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
@@ -164,7 +167,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             script = _check_script()
             if not script:
                 safe_answer_callback_query(bot_inst, call.id, "Script not configured")
-                bot_inst.send_message(chat_id, "Update script not configured in config.yaml (scripts.update_containers).")
+                bot_inst.send_message(
+                    chat_id,
+                    "Update script not configured in config.yaml (scripts.update_containers).",
+                )
                 return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)
@@ -181,7 +187,10 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
             script = _check_script()
             if not script:
                 safe_answer_callback_query(bot_inst, call.id, "Script not configured")
-                bot_inst.send_message(chat_id, "Update script not configured in config.yaml (scripts.update_containers).")
+                bot_inst.send_message(
+                    chat_id,
+                    "Update script not configured in config.yaml (scripts.update_containers).",
+                )
                 return
             safe_answer_callback_query(bot_inst, call.id)
             bot_inst.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=None)

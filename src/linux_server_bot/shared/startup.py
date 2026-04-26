@@ -277,6 +277,49 @@ def run_setup_wizard(env_path: str) -> None:
     print("  Setup complete! Starting the bot...\n")
 
 
+def migrate_legacy_config_path(config_path: str) -> None:
+    """Move a top-level ``config.yaml`` into the new ``config/`` directory.
+
+    The 2.x layout placed ``config.yaml`` at the repo root and bind-mounted
+    it as a single file in Docker. Single-file bind mounts break when an
+    editor (vim, Claude Edit, …) replaces the host file via atomic rename:
+    the container ends up writing to an orphaned inode, so threshold
+    updates from the bot never reach the host. The 2.1 layout puts the
+    file inside ``config/`` and mounts the directory instead.
+
+    This helper migrates an old layout in place when both conditions hold:
+
+    * ``config_path`` (the new location) does not exist yet
+    * a legacy ``config.yaml`` exists next to it (or in the cwd)
+
+    Runs only on the host side: in Docker, the legacy file is no longer
+    mounted into the container, so this is a no-op there. Docker users
+    migrate via ``tools/migrate-config-layout.sh`` before ``compose up``.
+    """
+    target = os.path.abspath(config_path)
+    if os.path.exists(target):
+        return
+
+    # Look for the legacy file: either a sibling of the new config dir, or
+    # the literal "config.yaml" in cwd (host-native dev runs).
+    candidates = [
+        os.path.join(os.path.dirname(os.path.dirname(target)), "config.yaml"),
+        os.path.abspath("config.yaml"),
+    ]
+    legacy = next((p for p in candidates if os.path.exists(p) and p != target), None)
+    if legacy is None:
+        return
+
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    os.rename(legacy, target)
+    logger.warning(
+        "Migrated legacy config.yaml: %s -> %s. The 2.x single-file bind "
+        "mount has been replaced by a directory mount; see README.",
+        legacy,
+        target,
+    )
+
+
 def ensure_env(env_path: str) -> None:
     """Ensure .env exists and has required values.
 
@@ -364,7 +407,8 @@ def check_config_file(config_path: str) -> bool:
     if os.path.exists(config_path):
         return True
     logger.warning(
-        "Config file %s not found. Using defaults. Copy config.example.yaml to config.yaml to customize.",
+        "Config file %s not found. Using defaults. Copy config.example.yaml to %s to customize.",
+        config_path,
         config_path,
     )
     return False

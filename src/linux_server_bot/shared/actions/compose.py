@@ -12,6 +12,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Order matters: compose v2 prefers .yaml, but .yml is still common.
+_COMPOSE_FILENAMES = ("docker-compose.yaml", "docker-compose.yml", "compose.yaml", "compose.yml")
+
 
 def _looks_like_missing_compose_v2(result) -> bool:
     """Detect cases where ``docker compose`` is unavailable/incompatible."""
@@ -19,10 +22,34 @@ def _looks_like_missing_compose_v2(result) -> bool:
     return "unknown shorthand flag: 'f' in -f" in error_text or "'compose' is not a docker command" in error_text
 
 
+def _compose_file(path: str) -> str:
+    """Return ``"<path>/<filename>"`` for the first compose file that exists.
+
+    Probes for the standard names via ``ls`` on the host (so it works the
+    same whether the bot runs in Docker or natively). Falls back to the
+    canonical ``docker-compose.yaml`` so error messages stay informative.
+    """
+    probe = run_command(["ls"] + [f"{path}/{name}" for name in _COMPOSE_FILENAMES], force_host=True)
+    for line in probe.stdout.splitlines():
+        line = line.strip()
+        if line.startswith(path + "/"):
+            return line
+    return f"{path}/docker-compose.yaml"
+
+
 def _compose_cmd(path: str, args: list[str], timeout: int = 120):
+    """Run ``docker compose -f <stack>/<file> <args>`` against the host.
+
+    The compose file lives on the host filesystem and is rarely mounted
+    into the bot container, so the call is forced through nsenter to
+    enter the host's mount namespace. The host's docker CLI talks to
+    the same daemon via the shared docker socket either way.
+    """
+    compose_file = _compose_file(path)
     result = run_command(
-        ["docker", "compose", "-f", f"{path}/docker-compose.yml"] + args,
+        ["docker", "compose", "-f", compose_file] + args,
         timeout=timeout,
+        force_host=True,
     )
     if not result.success and _looks_like_missing_compose_v2(result):
         result.stderr = (

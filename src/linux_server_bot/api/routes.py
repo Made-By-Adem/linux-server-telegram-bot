@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 def _config_path() -> str:
-    return os.environ.get("CONFIG_PATH", "config.yaml")
+    return os.environ.get("CONFIG_PATH", "config/config.yaml")
 
 
 router = APIRouter(prefix="/api", dependencies=[Depends(verify_api_key)])
