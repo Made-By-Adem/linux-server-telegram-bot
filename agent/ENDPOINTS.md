@@ -475,17 +475,17 @@ Error when script not configured:
 
 Runs `apt-get update && apt-get upgrade -y` on the host. If rkhunter is installed, `rkhunter --propupd` is run automatically after a successful upgrade.
 
-### `POST /api/system-updates/dry-run`
+### `POST /api/system-updates/check`
 
-Run `apt-get update` and list upgradable packages without installing.
+Run `apt-get update` and list upgradable packages without installing. Returns the package list, count, and whether rkhunter is installed.
 
 ```json
-{"success": true, "output": "Reading package lists...\nListing... Done\nnginx/stable 1.26.0-1 amd64 [upgradable from: 1.25.4-1]"}
+{"success": true, "count": 3, "packages": ["nginx/stable 1.26.0-1 amd64 [upgradable from: 1.25.4-1]", "..."], "rkhunter": true, "output": "..."}
 ```
 
-### `POST /api/system-updates/run`
+### `POST /api/system-updates/apply`
 
-Execute the full system update.
+Execute `apt-get upgrade -y`. If rkhunter is installed, runs `rkhunter --propupd` afterwards.
 
 ```json
 {"success": true, "output": "Reading package lists...\n...\n--- rkhunter --propupd ---\n[ Rootkit Hunter version 1.4.6 ]\nFile updated: ..."}
