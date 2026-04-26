@@ -276,16 +276,16 @@ class AppConfig:
             else FeaturesConfig()
         )
 
-        self.services = _parse_monitored_items(data.get("services", []))
-        self.containers = _parse_monitored_items(data.get("containers", []))
-        self.logfiles = data.get("logfiles", [])
+        self.services = _parse_monitored_items(data.get("services") or [])
+        self.containers = _parse_monitored_items(data.get("containers") or [])
+        self.logfiles = data.get("logfiles") or []
         self.server_states_path = data.get("server_states_path", "server_states.json")
         self.log_directory = data.get("log_directory", "./logs")
 
         # Compose stacks
         self.compose_stacks = [
             ComposeStack(name=s["name"], path=s["path"])
-            for s in data.get("compose_stacks", [])
+            for s in (data.get("compose_stacks") or [])
             if "name" in s and "path" in s
         ]
 
@@ -296,15 +296,15 @@ class AppConfig:
                 host=s["host"],
                 port=int(s.get("port", 443)),
             )
-            for s in data.get("servers", [])
+            for s in (data.get("servers") or [])
             if "name" in s and "host" in s
         ]
 
         # Scripts
-        scripts = data.get("scripts", {})
+        scripts = data.get("scripts") or {}
         custom_scripts = [
             CustomScript(name=s["name"], path=s["path"], timeout=int(s.get("timeout", 300)))
-            for s in scripts.get("custom", [])
+            for s in (scripts.get("custom") or [])
             if isinstance(s, dict) and "name" in s and "path" in s
         ]
         # Backup config accepts either a plain path string (legacy) or a dict
@@ -324,14 +324,14 @@ class AppConfig:
         )
 
         # Pironman
-        pironman_data = data.get("pironman", {})
+        pironman_data = data.get("pironman") or {}
         variant = str(pironman_data.get("variant", "base")).lower()
         if variant not in PironmanConfig.VARIANTS:
             variant = "base"
         self.pironman = PironmanConfig(variant=variant)
 
         # API
-        api_data = data.get("api", {})
+        api_data = data.get("api") or {}
         self.api = ApiConfig(
             enabled=bool(api_data.get("enabled", False)),
             port=int(api_data.get("port", 8120)),
@@ -339,10 +339,10 @@ class AppConfig:
         )
 
         # Monitoring
-        mon = data.get("monitoring", {})
+        mon = data.get("monitoring") or {}
         mon_servers = [
             ServerEntry(name=s["name"], host=s["host"], port=int(s.get("port", 443)))
-            for s in mon.get("servers", [])
+            for s in (mon.get("servers") or [])
             if "name" in s and "host" in s
         ]
         self.monitoring = MonitoringConfig(
