@@ -46,7 +46,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register settings handlers."""
 
     def _get_config_path() -> str:
-        return os.environ.get("CONFIG_PATH", "config.yaml")
+        return os.environ.get("CONFIG_PATH", "config/config.yaml")
 
     def _send_settings(bot_inst, chat_id: int) -> None:
         """Show all features with their current state and toggle buttons."""

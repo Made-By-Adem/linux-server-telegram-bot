@@ -8,7 +8,7 @@ The API makes this bot a natural fit for **AI agents**: give your agent the [ski
 Telegram Chat ──── Bot ──────┐
                              ├──> shared/actions/ ──> Docker / systemd / shell
 AI Agent ─────── REST API ───┘
-                               ▲ single config.yaml (hot-reloadable)
+                               ▲ single config/config.yaml (hot-reloadable)
 ```
 
 <img src="example.jpg" alt="Telegram bot interface" width="250">
@@ -117,7 +117,7 @@ cd linux-server-telegram-bot
 
 # Copy example configs
 cp .env.example .env
-cp config.example.yaml config.yaml
+mkdir -p config && cp config.example.yaml config/config.yaml
 ```
 
 Edit `.env` with the credentials from step 1:
@@ -161,9 +161,11 @@ docker compose logs -f
 | `WOL_ADDRESS` | No | MAC address for Wake-on-LAN (menu button hidden when empty) |
 | `WOL_HOSTNAME` | No | Display name for the WoL device |
 
-### config.yaml
+### config/config.yaml
 
-All settings are in `config.yaml` with `${VAR}` syntax for environment variable references. Changes are picked up automatically (hot-reload). See [`config.example.yaml`](config.example.yaml) for a complete reference.
+All settings are in `config/config.yaml` with `${VAR}` syntax for environment variable references. Changes are picked up automatically (hot-reload). See [`config.example.yaml`](config.example.yaml) for a complete reference.
+
+> **Upgrading from 2.x?** The live config moved from `./config.yaml` to `./config/config.yaml` to fix a Docker single-file bind-mount bug that silently dropped threshold updates. Run `./tools/migrate-config-layout.sh` once before `docker compose up -d`. Host-native runs migrate automatically on next startup.
 
 #### Services and containers
 

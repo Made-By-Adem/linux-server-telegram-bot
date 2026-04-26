@@ -1,6 +1,7 @@
 # Linux Server Bot - Configuration
 # Environment variables can be referenced with ${VAR_NAME} syntax.
-# Copy this file to config.yaml and adjust values.
+# Copy this file to config/config.yaml and adjust values:
+#   mkdir -p config && cp config.example.yaml config/config.yaml
 
 telegram:
   bot_token: ${SECRET_TOKEN}

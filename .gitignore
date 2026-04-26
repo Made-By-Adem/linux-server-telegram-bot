@@ -4,6 +4,7 @@
 # Environment and config
 .env
 config.yaml
+config/config.yaml
 server_states.json
 .setup_state.json
 

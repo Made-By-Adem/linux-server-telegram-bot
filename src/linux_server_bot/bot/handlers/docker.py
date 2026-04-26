@@ -84,7 +84,7 @@ def _send_status(bot, chat_id: int, config) -> None:
 
 
 def _get_config_path() -> str:
-    return os.environ.get("CONFIG_PATH", "config.yaml")
+    return os.environ.get("CONFIG_PATH", "config/config.yaml")
 
 
 def _send_policy_overview(bot, chat_id: int, config) -> None:

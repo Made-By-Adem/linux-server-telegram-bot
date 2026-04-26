@@ -18,6 +18,7 @@ from linux_server_bot.shared.logging_setup import setup_logging
 from linux_server_bot.shared.shell import warmup as shell_warmup
 from linux_server_bot.shared.startup import (
     ensure_env,
+    migrate_legacy_config_path,
     print_banner,
     run_preflight_checks,
     setup_graceful_shutdown,
@@ -224,7 +225,8 @@ def main() -> None:
     setup_graceful_shutdown()
 
     # Load config (starts watchdog file watcher)
-    config_path = os.environ.get("CONFIG_PATH", "config.yaml")
+    config_path = os.environ.get("CONFIG_PATH", "config/config.yaml")
+    migrate_legacy_config_path(config_path)
     load_config(config_path)
     logger.info("[boot] config loaded (%.1fs)", time.monotonic() - boot_t0)
 

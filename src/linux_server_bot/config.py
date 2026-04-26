@@ -16,7 +16,8 @@ from watchdog.observers.polling import PollingObserver
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_CONFIG_PATH = Path("config.yaml")
+_DEFAULT_CONFIG_PATH = Path("config/config.yaml")
+_LEGACY_CONFIG_PATH = Path("config.yaml")
 _ENV_VAR_PATTERN = re.compile(r"\$\{(\w+)\}")
 _DEBOUNCE_SECONDS = 0.5
 

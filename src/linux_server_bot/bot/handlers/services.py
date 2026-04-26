@@ -78,7 +78,7 @@ def register(bot: telebot.TeleBot, config: AppConfig, show_menu) -> None:
     """Register all service management handlers."""
 
     def _get_config_path() -> str:
-        return os.environ.get("CONFIG_PATH", "config.yaml")
+        return os.environ.get("CONFIG_PATH", "config/config.yaml")
 
     def _send_policy_overview(bot_inst, chat_id: int) -> None:
         """Show current monitoring policies for all configured services."""
