@@ -3,14 +3,24 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from linux_server_bot.shared.shell import run_command, run_shell
 
 logger = logging.getLogger(__name__)
 
 _SYSINFO_SCRIPT = r"""
-# CPU
-cpu=$(top -b -n 1 | awk '/^%Cpu/ {printf "%.1f", 100 - $8}')
+# CPU (1s /proc/stat diff -- top's awk parsing breaks at 100% load)
+read _ u1 n1 s1 i1 w1 q1 sq1 st1 g1 gn1 < /proc/stat
+sleep 1
+read _ u2 n2 s2 i2 w2 q2 sq2 st2 g2 gn2 < /proc/stat
+total_diff=$(( (u2+n2+s2+i2+w2+q2+sq2+st2+g2+gn2) - (u1+n1+s1+i1+w1+q1+sq1+st1+g1+gn1) ))
+idle_diff=$(( i2 - i1 ))
+if [ "$total_diff" -gt 0 ]; then
+  cpu=$(awk -v t=$total_diff -v i=$idle_diff 'BEGIN { printf "%.1f", 100 * (1 - i/t) }')
+else
+  cpu="0.0"
+fi
 echo "CPU|${cpu}%"
 
 # Memory
@@ -117,13 +127,43 @@ def get_sysinfo_text() -> str:
     return "\n".join(out)
 
 
-def get_cpu_usage() -> dict:
-    """Get CPU usage percentage."""
-    result = run_shell("top -bn 1 | awk '/^%Cpu/ {print 100 - $8}'")
+def _read_cpu_times() -> tuple[int, int] | None:
+    """Read aggregate CPU jiffies from /proc/stat. Returns (total, idle) or None."""
+    result = run_shell("head -n 1 /proc/stat")
+    if not result.success:
+        return None
+    parts = result.stdout.split()
+    if len(parts) < 5 or parts[0] != "cpu":
+        return None
     try:
-        return {"cpu_percent": float(result.stdout.strip()), "success": True}
-    except (ValueError, IndexError):
-        return {"cpu_percent": None, "success": False, "error": "Could not parse CPU usage"}
+        fields = [int(x) for x in parts[1:]]
+    except ValueError:
+        return None
+    idle = fields[3]
+    total = sum(fields)
+    return total, idle
+
+
+def get_cpu_usage() -> dict:
+    """Get CPU usage percentage from /proc/stat over a 1-second window.
+
+    Replaces the previous ``top -bn 1 | awk`` parsing which mis-read idle as 0
+    whenever any %Cpu(s) field reached 100.0 (top's fixed-width column shifts
+    by one when the leading space disappears, so awk's $8 became "ni," instead
+    of the idle value).
+    """
+    first = _read_cpu_times()
+    if first is None:
+        return {"cpu_percent": None, "success": False, "error": "Could not read /proc/stat"}
+    time.sleep(1)
+    second = _read_cpu_times()
+    if second is None:
+        return {"cpu_percent": None, "success": False, "error": "Could not read /proc/stat"}
+    total_delta = second[0] - first[0]
+    idle_delta = second[1] - first[1]
+    if total_delta <= 0:
+        return {"cpu_percent": None, "success": False, "error": "Invalid /proc/stat delta"}
+    return {"cpu_percent": round(100.0 * (1.0 - idle_delta / total_delta), 1), "success": True}
 
 
 def get_memory_usage() -> dict:

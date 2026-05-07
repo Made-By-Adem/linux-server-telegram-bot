@@ -17,14 +17,53 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _get_cpu_usage() -> float | None:
-    """Get total CPU usage percentage (100 - idle) from top."""
-    result = run_shell("top -bn 1 | awk '/^%Cpu/ {printf \"%.1f\", 100 - $8}'")
-    try:
-        return float(result.stdout.strip())
-    except (ValueError, IndexError):
-        logger.warning("Could not parse CPU usage: %s", result.stdout)
+def _read_cpu_times() -> tuple[int, int] | None:
+    """Read aggregate CPU jiffies from /proc/stat. Returns (total, idle) or None.
+
+    Idle is just the ``idle`` column, matching ``top``'s ``id`` field
+    (``$8`` in the previous awk parse) -- iowait is NOT treated as idle, so
+    iowait-heavy workloads still count toward the alert threshold.
+    """
+    result = run_shell("head -n 1 /proc/stat")
+    if not result.success:
         return None
+    parts = result.stdout.split()
+    if len(parts) < 5 or parts[0] != "cpu":
+        return None
+    try:
+        fields = [int(x) for x in parts[1:]]
+    except ValueError:
+        return None
+    idle = fields[3]
+    total = sum(fields)
+    return total, idle
+
+
+def _get_cpu_usage() -> float | None:
+    """Get total CPU usage percentage from /proc/stat over a 1-second window.
+
+    Replaces the previous ``top -bn 1 | awk`` parsing which mis-read idle as 0
+    whenever any %Cpu(s) field reached 100.0 (top's fixed-width column shifts
+    by one when the leading space disappears, so awk's $8 became "ni," instead
+    of the idle value).
+    """
+    first = _read_cpu_times()
+    if first is None:
+        logger.warning("Could not read /proc/stat (first sample)")
+        return None
+    time.sleep(1)
+    second = _read_cpu_times()
+    if second is None:
+        logger.warning("Could not read /proc/stat (second sample)")
+        return None
+    total_delta = second[0] - first[0]
+    idle_delta = second[1] - first[1]
+    if total_delta <= 0:
+        logger.warning(
+            "Invalid /proc/stat delta: total=%d idle=%d", total_delta, idle_delta
+        )
+        return None
+    return round(100.0 * (1.0 - idle_delta / total_delta), 1)
 
 
 def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
