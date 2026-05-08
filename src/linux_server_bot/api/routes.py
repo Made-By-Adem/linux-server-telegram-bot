@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from dataclasses import asdict
@@ -199,12 +200,13 @@ async def logs_read(index: int, tail: int = 50):
 
 @router.get("/sysinfo")
 async def sysinfo_full():
-    return {"success": True, "data": sysinfo.get_sysinfo_text()}
+    text = await asyncio.to_thread(sysinfo.get_sysinfo_text)
+    return {"success": True, "data": text}
 
 
 @router.get("/sysinfo/cpu")
 async def sysinfo_cpu():
-    return sysinfo.get_cpu_usage()
+    return await asyncio.to_thread(sysinfo.get_cpu_usage)
 
 
 @router.get("/sysinfo/memory")

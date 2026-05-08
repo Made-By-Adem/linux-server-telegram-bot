@@ -6,6 +6,7 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from linux_server_bot.shared.cpu import read_cpu_percent
 from linux_server_bot.shared.shell import run_shell
 from linux_server_bot.shared.telegram import escape_html
 
@@ -17,61 +18,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _read_cpu_times() -> tuple[int, int] | None:
-    """Read aggregate CPU jiffies from /proc/stat. Returns (total, idle) or None.
-
-    Idle is just the ``idle`` column, matching ``top``'s ``id`` field
-    (``$8`` in the previous awk parse) -- iowait is NOT treated as idle, so
-    iowait-heavy workloads still count toward the alert threshold.
-    """
-    result = run_shell("head -n 1 /proc/stat")
-    if not result.success:
-        return None
-    parts = result.stdout.split()
-    if len(parts) < 5 or parts[0] != "cpu":
-        return None
-    try:
-        fields = [int(x) for x in parts[1:]]
-    except ValueError:
-        return None
-    idle = fields[3]
-    total = sum(fields)
-    return total, idle
-
-
-def _get_cpu_usage() -> float | None:
-    """Get total CPU usage percentage from /proc/stat over a 1-second window.
-
-    Replaces the previous ``top -bn 1 | awk`` parsing which mis-read idle as 0
-    whenever any %Cpu(s) field reached 100.0 (top's fixed-width column shifts
-    by one when the leading space disappears, so awk's $8 became "ni," instead
-    of the idle value).
-    """
-    first = _read_cpu_times()
-    if first is None:
-        logger.warning("Could not read /proc/stat (first sample)")
-        return None
-    time.sleep(1)
-    second = _read_cpu_times()
-    if second is None:
-        logger.warning("Could not read /proc/stat (second sample)")
-        return None
-    total_delta = second[0] - first[0]
-    idle_delta = second[1] - first[1]
-    if total_delta <= 0:
-        logger.warning(
-            "Invalid /proc/stat delta: total=%d idle=%d", total_delta, idle_delta
-        )
-        return None
-    return round(100.0 * (1.0 - idle_delta / total_delta), 1)
-
-
 def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
     """Check CPU usage with double-verification on high load."""
     from linux_server_bot.shared.telegram import send_to_all
 
     threshold = config.monitoring.thresholds.get("cpu_percent", 80)
-    usage = _get_cpu_usage()
+    usage = read_cpu_percent()
     if usage is None:
         return
 
@@ -81,7 +33,7 @@ def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
 
     delay = int(config.monitoring.thresholds.get("recheck_delay_seconds", 5))
     time.sleep(delay)
-    usage2 = _get_cpu_usage()
+    usage2 = read_cpu_percent()
     if usage2 is None or usage2 <= threshold:
         return
 
