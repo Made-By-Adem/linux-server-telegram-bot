@@ -1,12 +1,20 @@
 # Log directory
 /logs/
+*.log
 
-# Environment and config
+# Environment and secrets
 .env
+.env.*
+!.env.example
 config.yaml
 config/config.yaml
+config.prod.yaml
 server_states.json
 .setup_state.json
+*.pem
+*.key
+*.crt
+*.cert
 
 # Python
 __pycache__/
@@ -20,14 +28,29 @@ build/
 venv/
 .venv/
 
+# Test and lint caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+
 # IDE
 .vscode/
 .idea/
-config.prod.yaml
+*.swp
+*.swo
+*~
+
+# OS metadata
+.DS_Store
+Thumbs.db
 
 # Crash dumps
 *.stackdump
 
-#Claude
-.claude
+# Claude Code
+.claude/
 pi-telegrambot-old

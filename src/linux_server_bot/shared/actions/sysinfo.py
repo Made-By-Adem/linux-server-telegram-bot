@@ -10,19 +10,6 @@ from linux_server_bot.shared.shell import run_command, run_shell
 logger = logging.getLogger(__name__)
 
 _SYSINFO_SCRIPT = r"""
-# CPU (1s /proc/stat diff -- top's awk parsing breaks at 100% load)
-read _ u1 n1 s1 i1 w1 q1 sq1 st1 g1 gn1 < /proc/stat
-sleep 1
-read _ u2 n2 s2 i2 w2 q2 sq2 st2 g2 gn2 < /proc/stat
-total_diff=$(( (u2+n2+s2+i2+w2+q2+sq2+st2+g2+gn2) - (u1+n1+s1+i1+w1+q1+sq1+st1+g1+gn1) ))
-idle_diff=$(( i2 - i1 ))
-if [ "$total_diff" -gt 0 ]; then
-  cpu=$(awk -v t=$total_diff -v i=$idle_diff 'BEGIN { printf "%.1f", 100 * (1 - i/t) }')
-else
-  cpu="0.0"
-fi
-echo "CPU|${cpu}%"
-
 # Memory
 free -m | awk '/^Mem/ {printf "MEM|%dMB|%dMB|%dMB|%dMB\n", $2, $3, $4, $6}'
 
@@ -55,6 +42,7 @@ echo "HOST|$(hostname)"
 
 def get_sysinfo_text() -> str:
     """Get full system info as structured, formatted text."""
+    cpu_data = get_cpu_usage()
     result = run_shell(_SYSINFO_SCRIPT, timeout=30)
     if not result.stdout.strip():
         return result.stderr or "Could not retrieve system info."
@@ -77,8 +65,11 @@ def get_sysinfo_text() -> str:
     out.append(f"\U0001f5a5 {hostname}")
     out.append("")
 
-    # CPU
-    cpu = lines.get("CPU", "N/A")
+    # CPU — read via Python /proc/stat diff; shell-based diff is unreliable
+    # when _SYSINFO_SCRIPT runs through nsenter double-wrapping (sleep gets
+    # mangled, producing total_diff of 2-4 instead of ~400 jiffies).
+    cpu_pct = cpu_data.get("cpu_percent")
+    cpu = f"{cpu_pct}%" if cpu_pct is not None else "N/A"
     out.append(f"\U0001f4c8 CPU: {cpu}")
 
     # Memory
