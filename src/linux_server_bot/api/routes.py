@@ -211,17 +211,17 @@ async def sysinfo_cpu():
 
 @router.get("/sysinfo/memory")
 async def sysinfo_memory():
-    return sysinfo.get_memory_usage()
+    return await asyncio.to_thread(sysinfo.get_memory_usage)
 
 
 @router.get("/sysinfo/disk")
 async def sysinfo_disk():
-    return sysinfo.get_disk_usage()
+    return await asyncio.to_thread(sysinfo.get_disk_usage)
 
 
 @router.get("/sysinfo/temperature")
 async def sysinfo_temperature():
-    return sysinfo.get_temperature()
+    return await asyncio.to_thread(sysinfo.get_temperature)
 
 
 @router.post("/sysinfo/stress-test")
