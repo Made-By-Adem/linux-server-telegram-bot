@@ -32,11 +32,13 @@ def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
         return
 
     delay = int(config.monitoring.thresholds.get("recheck_delay_seconds", 5))
+    t0 = time.monotonic()
     time.sleep(delay)
     usage2 = read_cpu_percent()
     if usage2 is None or usage2 <= threshold:
         return
 
+    elapsed = int(time.monotonic() - t0 + 0.5)
     # Get top consumers
     top_result = run_shell("ps -eo pid,%cpu,%mem,comm --sort=-%cpu | head -n 11")
     consumers = escape_html(top_result.stdout)
@@ -45,7 +47,7 @@ def check_cpu(bot: telebot.TeleBot, config: AppConfig) -> None:
         bot,
         config,
         f"\U0001f525 CPU usage is high (>{threshold}%). "
-        f"First: {usage:.1f}%, after {delay}s: {usage2:.1f}%.\n"
+        f"First: {usage:.1f}%, after {elapsed}s: {usage2:.1f}%.\n"
         f"Top consumers:\n<pre>{consumers}</pre>",
         parse_mode="HTML",
     )

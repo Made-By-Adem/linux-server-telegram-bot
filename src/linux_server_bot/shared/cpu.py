@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 
-from linux_server_bot.shared.shell import run_shell
+from linux_server_bot.shared.shell import run_command
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def _read_cpu_times() -> tuple[int, int] | None:
     Idle is just the ``idle`` column (index 3), not iowait, so iowait-heavy
     workloads still count toward usage/alert thresholds.
     """
-    result = run_shell("head -n 1 /proc/stat")
+    result = run_command(["head", "-n", "1", "/proc/stat"])
     if not result.success:
         return None
     parts = result.stdout.split()
